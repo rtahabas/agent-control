@@ -11,17 +11,21 @@ export function Overview({
   onFileClick,
   onNewMemory,
   onBrowseMemory,
+  onSkillClick,
+  onNewSkill,
 }: {
   state: State | null;
   onFileClick?: (file: string) => void;
   onNewMemory?: () => void;
   onBrowseMemory?: () => void;
+  onSkillClick?: (name: string) => void;
+  onNewSkill?: () => void;
 }) {
   if (!state) return <div className="p-8 text-sm text-zinc-400">Loading state…</div>;
   return (
     <div className="p-6 space-y-6 max-w-6xl">
       <Projects projects={state.projects} />
-      <Skills skills={state.skills} />
+      <Skills skills={state.skills} onSkillClick={onSkillClick} onNewClick={onNewSkill} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Memory
           memory={state.memory}

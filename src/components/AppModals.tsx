@@ -7,6 +7,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { FileViewer } from "./FileViewer";
 import { NewFileModal } from "./NewFileModal";
 import { MemoryBrowser } from "./MemoryBrowser";
+import { SkillViewer } from "./SkillViewer";
+import { NewSkillModal } from "./NewSkillModal";
 
 export type ModalState =
   | { kind: "none" }
@@ -15,7 +17,9 @@ export type ModalState =
   | { kind: "delete"; agent: Agent }
   | { kind: "file"; agent: Agent; file: string }
   | { kind: "new-file"; agent: Agent }
-  | { kind: "browse"; agent: Agent };
+  | { kind: "browse"; agent: Agent }
+  | { kind: "skill"; agent: Agent; name: string }
+  | { kind: "new-skill"; agent: Agent };
 
 interface Props {
   modal: ModalState;
@@ -25,9 +29,10 @@ interface Props {
   onAgentEdited: () => void;
   onAgentDeleted: (id: string) => Promise<void>;
   onOpenFile: (agent: Agent, file: string) => void;
+  onOpenSkill: (agent: Agent, name: string) => void;
 }
 
-export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgentDeleted, onOpenFile }: Props) {
+export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgentDeleted, onOpenFile, onOpenSkill }: Props) {
   if (modal.kind === "none") return null;
   if (modal.kind === "create") {
     return <AgentEditor mode="create" onClose={onClose} onSaved={onAgentSaved} />;
@@ -62,11 +67,23 @@ export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgent
       />
     );
   }
+  if (modal.kind === "browse") {
+    return (
+      <MemoryBrowser
+        agentId={modal.agent.id}
+        onClose={onClose}
+        onSelect={(file) => onOpenFile(modal.agent, file)}
+      />
+    );
+  }
+  if (modal.kind === "skill") {
+    return <SkillViewer agentId={modal.agent.id} skillName={modal.name} onClose={onClose} />;
+  }
   return (
-    <MemoryBrowser
+    <NewSkillModal
       agentId={modal.agent.id}
       onClose={onClose}
-      onSelect={(file) => onOpenFile(modal.agent, file)}
+      onCreated={(name) => onOpenSkill(modal.agent, name)}
     />
   );
 }

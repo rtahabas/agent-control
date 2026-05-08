@@ -104,6 +104,8 @@ export default function Home() {
               onFileClick={(file) => { if (selectedAgent) setModal({ kind: "file", agent: selectedAgent, file }); }}
               onNewMemory={() => { if (selectedAgent) setModal({ kind: "new-file", agent: selectedAgent }); }}
               onBrowseMemory={() => { if (selectedAgent) setModal({ kind: "browse", agent: selectedAgent }); }}
+              onSkillClick={(name) => { if (selectedAgent) setModal({ kind: "skill", agent: selectedAgent, name }); }}
+              onNewSkill={() => { if (selectedAgent) setModal({ kind: "new-skill", agent: selectedAgent }); }}
             />
           </div>
           <div className={`absolute inset-0 ${view === "chat" ? "" : "hidden"}`}>
@@ -123,6 +125,7 @@ export default function Home() {
           setModal(NONE);
         }}
         onOpenFile={(agent, file) => setModal({ kind: "file", agent, file })}
+        onOpenSkill={(agent, name) => setModal({ kind: "skill", agent, name })}
       />
     </div>
   );
