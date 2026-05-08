@@ -102,8 +102,9 @@ async function sendTyping() {
 
 async function askClaude(prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(CLAUDE_BIN, ["-p", "--add-dir", AGENT_DIR, prompt], {
+    const child = spawn(CLAUDE_BIN, ["--print", "--add-dir", AGENT_DIR], {
       timeout: ASK_TIMEOUT_MS,
+      stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -114,6 +115,8 @@ async function askClaude(prompt: string): Promise<string> {
       if (code === 0) resolve(stdout.trim());
       else reject(new Error(stderr.trim() || `claude exited ${code}`));
     });
+    child.stdin.write(prompt);
+    child.stdin.end();
   });
 }
 
