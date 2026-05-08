@@ -106,6 +106,8 @@ export default function Home() {
               onBrowseMemory={() => { if (selectedAgent) setModal({ kind: "browse", agent: selectedAgent }); }}
               onSkillClick={(name) => { if (selectedAgent) setModal({ kind: "skill", agent: selectedAgent, name }); }}
               onNewSkill={() => { if (selectedAgent) setModal({ kind: "new-skill", agent: selectedAgent }); }}
+              onSubAgentClick={(name) => { if (selectedAgent) setModal({ kind: "sub-agent", agent: selectedAgent, name }); }}
+              onNewSubAgent={() => { if (selectedAgent) setModal({ kind: "new-sub-agent", agent: selectedAgent }); }}
             />
           </div>
           <div className={`absolute inset-0 ${view === "chat" ? "" : "hidden"}`}>
@@ -126,6 +128,7 @@ export default function Home() {
         }}
         onOpenFile={(agent, file) => setModal({ kind: "file", agent, file })}
         onOpenSkill={(agent, name) => setModal({ kind: "skill", agent, name })}
+        onOpenSubAgent={(agent, name) => setModal({ kind: "sub-agent", agent, name })}
       />
     </div>
   );

@@ -3,17 +3,38 @@
 import { parsePending, type State } from "@/lib/api";
 import { SectionHead } from "./Section";
 
-export function SubAgents({ agents }: { agents: string[] }) {
+export function SubAgents({
+  agents,
+  onSubAgentClick,
+  onNewClick,
+}: {
+  agents: string[];
+  onSubAgentClick?: (name: string) => void;
+  onNewClick?: () => void;
+}) {
   return (
     <section>
-      <SectionHead title="Sub-Agents" count={agents.length} />
+      <div className="flex items-baseline justify-between mb-3">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-sm font-semibold text-zinc-900 uppercase tracking-wide">Sub-Agents</h2>
+          <span className="text-xs text-zinc-400 mono">{agents.length}</span>
+        </div>
+        {onNewClick && (
+          <button type="button" onClick={onNewClick} className="text-[11px] px-2 py-0.5 rounded border border-zinc-200 text-zinc-700 hover:bg-zinc-50">+ New</button>
+        )}
+      </div>
       <div className="bg-white rounded-lg border border-zinc-200 p-4">
         <div className="flex flex-wrap gap-1.5">
-          {agents.map((a) => (
-            <span key={a} className="text-xs mono px-2 py-1 rounded bg-zinc-100 text-zinc-700">
-              {a}
-            </span>
-          ))}
+          {agents.map((a) =>
+            onSubAgentClick ? (
+              <button key={a} type="button" onClick={() => onSubAgentClick(a)}
+                className="text-xs mono px-2 py-1 rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900 transition">
+                {a}
+              </button>
+            ) : (
+              <span key={a} className="text-xs mono px-2 py-1 rounded bg-zinc-100 text-zinc-700">{a}</span>
+            )
+          )}
         </div>
       </div>
     </section>

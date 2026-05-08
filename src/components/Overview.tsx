@@ -13,6 +13,8 @@ export function Overview({
   onBrowseMemory,
   onSkillClick,
   onNewSkill,
+  onSubAgentClick,
+  onNewSubAgent,
 }: {
   state: State | null;
   onFileClick?: (file: string) => void;
@@ -20,6 +22,8 @@ export function Overview({
   onBrowseMemory?: () => void;
   onSkillClick?: (name: string) => void;
   onNewSkill?: () => void;
+  onSubAgentClick?: (name: string) => void;
+  onNewSubAgent?: () => void;
 }) {
   if (!state) return <div className="p-8 text-sm text-zinc-400">Loading state…</div>;
   return (
@@ -33,7 +37,11 @@ export function Overview({
           onNewClick={onNewMemory}
           onBrowseClick={onBrowseMemory}
         />
-        <SubAgents agents={state.sub_agents} />
+        <SubAgents
+          agents={state.sub_agents}
+          onSubAgentClick={onSubAgentClick}
+          onNewClick={onNewSubAgent}
+        />
         <Hooks hooks={state.hooks} />
       </div>
       <Pending pending={state.pending} />

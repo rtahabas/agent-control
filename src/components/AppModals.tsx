@@ -9,6 +9,8 @@ import { NewFileModal } from "./NewFileModal";
 import { MemoryBrowser } from "./MemoryBrowser";
 import { SkillViewer } from "./SkillViewer";
 import { NewSkillModal } from "./NewSkillModal";
+import { SubAgentViewer } from "./SubAgentViewer";
+import { NewSubAgentModal } from "./NewSubAgentModal";
 
 export type ModalState =
   | { kind: "none" }
@@ -19,7 +21,9 @@ export type ModalState =
   | { kind: "new-file"; agent: Agent }
   | { kind: "browse"; agent: Agent }
   | { kind: "skill"; agent: Agent; name: string }
-  | { kind: "new-skill"; agent: Agent };
+  | { kind: "new-skill"; agent: Agent }
+  | { kind: "sub-agent"; agent: Agent; name: string }
+  | { kind: "new-sub-agent"; agent: Agent };
 
 interface Props {
   modal: ModalState;
@@ -30,9 +34,10 @@ interface Props {
   onAgentDeleted: (id: string) => Promise<void>;
   onOpenFile: (agent: Agent, file: string) => void;
   onOpenSkill: (agent: Agent, name: string) => void;
+  onOpenSubAgent: (agent: Agent, name: string) => void;
 }
 
-export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgentDeleted, onOpenFile, onOpenSkill }: Props) {
+export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgentDeleted, onOpenFile, onOpenSkill, onOpenSubAgent }: Props) {
   if (modal.kind === "none") return null;
   if (modal.kind === "create") {
     return <AgentEditor mode="create" onClose={onClose} onSaved={onAgentSaved} />;
@@ -79,11 +84,23 @@ export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgent
   if (modal.kind === "skill") {
     return <SkillViewer agentId={modal.agent.id} skillName={modal.name} onClose={onClose} />;
   }
+  if (modal.kind === "new-skill") {
+    return (
+      <NewSkillModal
+        agentId={modal.agent.id}
+        onClose={onClose}
+        onCreated={(name) => onOpenSkill(modal.agent, name)}
+      />
+    );
+  }
+  if (modal.kind === "sub-agent") {
+    return <SubAgentViewer agentId={modal.agent.id} subName={modal.name} onClose={onClose} />;
+  }
   return (
-    <NewSkillModal
+    <NewSubAgentModal
       agentId={modal.agent.id}
       onClose={onClose}
-      onCreated={(name) => onOpenSkill(modal.agent, name)}
+      onCreated={(name) => onOpenSubAgent(modal.agent, name)}
     />
   );
 }
