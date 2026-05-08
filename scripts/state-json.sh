@@ -151,6 +151,37 @@ H_PRETOOL=$(count_hooks_for_event PreToolUse)
 H_POSTTOOL=$(count_hooks_for_event PostToolUse)
 H_STOP=$(count_hooks_for_event Stop)
 
+# ----- health -----
+HOT_FILE="$MEMORY_DIR/MEMORY.md"
+HOT_CAP=100
+if [ -f "$HOT_FILE" ]; then
+  HOT_LINES=$(wc -l < "$HOT_FILE" | tr -d ' ')
+else
+  HOT_LINES=0
+fi
+
+DAILY_DIR="$MEMORY_DIR/memory"
+NOW_EPOCH=$(date -u +%s)
+STALE_LINES=()
+if [ -d "$DAILY_DIR" ]; then
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    name=$(basename "$f")
+    date_str=$(printf '%s' "$name" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)
+    [ -z "$date_str" ] && continue
+    file_epoch=$(date -u -j -f "%Y-%m-%d" "$date_str" +%s 2>/dev/null || date -u -d "$date_str" +%s 2>/dev/null || echo "")
+    [ -z "$file_epoch" ] && continue
+    days=$(( (NOW_EPOCH - file_epoch) / 86400 ))
+    [ "$days" -le 30 ] && continue
+    STALE_LINES+=("$(jq -nc --arg n "$name" --argjson d "$days" '{file:$n, days_old:$d}')")
+  done < <(find "$DAILY_DIR" -maxdepth 1 -name '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]*.md' -type f 2>/dev/null | sort)
+fi
+if [ ${#STALE_LINES[@]} -eq 0 ]; then
+  STALE_DAILY_JSON="[]"
+else
+  STALE_DAILY_JSON="[$(IFS=,; echo "${STALE_LINES[*]}")]"
+fi
+
 jq -n \
   --arg generated "$GENERATED" \
   --argjson projects "$PROJECTS_JSON" \
@@ -170,6 +201,9 @@ jq -n \
   --argjson h_pre "$H_PRETOOL" \
   --argjson h_post "$H_POSTTOOL" \
   --argjson h_stop "$H_STOP" \
+  --argjson hot_lines "$HOT_LINES" \
+  --argjson hot_cap "$HOT_CAP" \
+  --argjson stale_daily "$STALE_DAILY_JSON" \
   '{
     generated: $generated,
     projects: $projects,
@@ -181,8 +215,13 @@ jq -n \
       modified_last_7d: $mem_recent_7,
       modified_last_30d: $mem_recent_30,
       categories: { feedback: $mem_fb, project: $mem_proj, pending: $mem_pend, other: $mem_other },
-      indexes: $indexes
+      indexes: $indexes,
+      hot_lines: $hot_lines,
+      hot_cap: $hot_cap
     },
     pending: $pending,
-    hooks: { SessionStart: $h_start, PreToolUse: $h_pre, PostToolUse: $h_post, Stop: $h_stop }
+    hooks: { SessionStart: $h_start, PreToolUse: $h_pre, PostToolUse: $h_post, Stop: $h_stop },
+    health: {
+      stale_daily_logs: $stale_daily
+    }
   }'
