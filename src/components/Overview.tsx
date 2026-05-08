@@ -5,6 +5,7 @@ import { Projects } from "./overview/Projects";
 import { Skills } from "./overview/Skills";
 import { Memory } from "./overview/Memory";
 import { SubAgents, Hooks, Pending } from "./overview/Misc";
+import { HealthBar } from "./overview/Health";
 
 export function Overview({
   state,
@@ -30,8 +31,15 @@ export function Overview({
   if (!state) return <div className="p-8 text-sm text-zinc-400">Loading state…</div>;
   return (
     <div className="p-6 space-y-6 max-w-6xl">
+      <HealthBar
+        memory={state.memory}
+        health={state.health}
+        skills={state.skills}
+      />
       <Projects projects={state.projects} />
-      <Skills skills={state.skills} onSkillClick={onSkillClick} onNewClick={onNewSkill} />
+      <div id="overview-skills">
+        <Skills skills={state.skills} onSkillClick={onSkillClick} onNewClick={onNewSkill} />
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Memory
           memory={state.memory}
