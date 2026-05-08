@@ -105,6 +105,7 @@ export default function Home() {
               onNewMemory={() => { if (selectedAgent) setModal({ kind: "new-file", agent: selectedAgent }); }}
               onBrowseMemory={() => { if (selectedAgent) setModal({ kind: "browse", agent: selectedAgent }); }}
               onSkillClick={(name) => { if (selectedAgent) setModal({ kind: "skill", agent: selectedAgent, name }); }}
+              onSkillConsolidate={(name) => { if (selectedAgent) setModal({ kind: "skill", agent: selectedAgent, name, consolidate: true }); }}
               onNewSkill={() => { if (selectedAgent) setModal({ kind: "new-skill", agent: selectedAgent }); }}
               onSubAgentClick={(name) => { if (selectedAgent) setModal({ kind: "sub-agent", agent: selectedAgent, name }); }}
               onNewSubAgent={() => { if (selectedAgent) setModal({ kind: "new-sub-agent", agent: selectedAgent }); }}

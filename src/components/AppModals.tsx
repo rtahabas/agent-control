@@ -21,7 +21,7 @@ export type ModalState =
   | { kind: "file"; agent: Agent; file: string }
   | { kind: "new-file"; agent: Agent }
   | { kind: "browse"; agent: Agent }
-  | { kind: "skill"; agent: Agent; name: string }
+  | { kind: "skill"; agent: Agent; name: string; consolidate?: boolean }
   | { kind: "new-skill"; agent: Agent }
   | { kind: "sub-agent"; agent: Agent; name: string }
   | { kind: "new-sub-agent"; agent: Agent }
@@ -84,7 +84,14 @@ export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgent
     );
   }
   if (modal.kind === "skill") {
-    return <SkillViewer agentId={modal.agent.id} skillName={modal.name} onClose={onClose} />;
+    return (
+      <SkillViewer
+        agentId={modal.agent.id}
+        skillName={modal.name}
+        consolidate={modal.consolidate}
+        onClose={onClose}
+      />
+    );
   }
   if (modal.kind === "new-skill") {
     return (

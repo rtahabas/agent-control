@@ -1,6 +1,12 @@
 "use client";
 
-import type { SkillCategory, SkillEntry, Skills as SkillsState } from "@/lib/api";
+import type {
+  SkillCategory,
+  SkillEntry,
+  SkillTimeline,
+  Skills as SkillsState,
+} from "@/lib/api";
+import { Sparkline } from "./Sparkline";
 
 const BAR: Record<SkillCategory, string> = {
   active: "bg-emerald-500",
@@ -27,11 +33,19 @@ const INSTALLED: Record<SkillCategory, boolean> = {
 
 interface Props {
   skills: SkillsState;
+  timeline?: SkillTimeline;
   onSkillClick?: (name: string) => void;
   onNewClick?: () => void;
+  onConsolidateClick?: (name: string) => void;
 }
 
-export function Skills({ skills, onSkillClick, onNewClick }: Props) {
+export function Skills({
+  skills,
+  timeline,
+  onSkillClick,
+  onNewClick,
+  onConsolidateClick,
+}: Props) {
   const counts = {
     active: skills.active.length,
     inactive: skills.inactive.length,
@@ -82,13 +96,16 @@ export function Skills({ skills, onSkillClick, onNewClick }: Props) {
               <th className="text-left font-medium px-4 py-2.5">Status</th>
               <th className="text-left font-medium px-4 py-2.5">Skill</th>
               <th className="text-right font-medium px-4 py-2.5">Inv</th>
+              <th className="text-left font-medium px-4 py-2.5">30d</th>
               <th className="text-left font-medium px-4 py-2.5">Last invoked</th>
+              <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {all.map((r, i) => {
               const installed = INSTALLED[r._c];
               const clickable = installed && onSkillClick;
+              const points = timeline?.[r.skill];
               return (
                 <tr key={`${r.skill}-${i}`}
                   onClick={clickable ? () => onSkillClick(r.skill) : undefined}
@@ -98,7 +115,28 @@ export function Skills({ skills, onSkillClick, onNewClick }: Props) {
                   </td>
                   <td className="px-4 py-2.5 mono text-zinc-900">{r.skill}</td>
                   <td className={`px-4 py-2.5 text-right mono ${r.invocations ? "text-zinc-900 font-medium" : "text-zinc-400"}`}>{r.invocations}</td>
+                  <td className="px-4 py-2.5">
+                    {points && points.length > 0 ? (
+                      <Sparkline points={points} />
+                    ) : (
+                      <span className="text-zinc-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-2.5 mono text-xs text-zinc-500">{r.last_invoked || "—"}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    {r._c === "dead" && onConsolidateClick && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onConsolidateClick(r.skill);
+                        }}
+                        className="text-[11px] px-2 py-0.5 rounded border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                      >
+                        Consolidate
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
