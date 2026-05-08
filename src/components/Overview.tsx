@@ -6,9 +6,11 @@ import { Skills } from "./overview/Skills";
 import { Memory } from "./overview/Memory";
 import { SubAgents, Hooks, Pending } from "./overview/Misc";
 import { HealthBar } from "./overview/Health";
+import { Tokens } from "./overview/Tokens";
 
 export function Overview({
   state,
+  agentId,
   onFileClick,
   onNewMemory,
   onBrowseMemory,
@@ -20,6 +22,7 @@ export function Overview({
   onSkillConsolidate,
 }: {
   state: State | null;
+  agentId?: string | null;
   onFileClick?: (file: string) => void;
   onNewMemory?: () => void;
   onBrowseMemory?: () => void;
@@ -38,6 +41,7 @@ export function Overview({
         health={state.health}
         skills={state.skills}
       />
+      {agentId && <Tokens agentId={agentId} />}
       <Projects projects={state.projects} />
       <div id="overview-skills">
         <Skills
