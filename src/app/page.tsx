@@ -108,6 +108,7 @@ export default function Home() {
               onNewSkill={() => { if (selectedAgent) setModal({ kind: "new-skill", agent: selectedAgent }); }}
               onSubAgentClick={(name) => { if (selectedAgent) setModal({ kind: "sub-agent", agent: selectedAgent, name }); }}
               onNewSubAgent={() => { if (selectedAgent) setModal({ kind: "new-sub-agent", agent: selectedAgent }); }}
+              onManageHooks={() => { if (selectedAgent) setModal({ kind: "hooks", agent: selectedAgent }); }}
             />
           </div>
           <div className={`absolute inset-0 ${view === "chat" ? "" : "hidden"}`}>

@@ -11,6 +11,7 @@ import { SkillViewer } from "./SkillViewer";
 import { NewSkillModal } from "./NewSkillModal";
 import { SubAgentViewer } from "./SubAgentViewer";
 import { NewSubAgentModal } from "./NewSubAgentModal";
+import { HooksManager } from "./HooksManager";
 
 export type ModalState =
   | { kind: "none" }
@@ -23,7 +24,8 @@ export type ModalState =
   | { kind: "skill"; agent: Agent; name: string }
   | { kind: "new-skill"; agent: Agent }
   | { kind: "sub-agent"; agent: Agent; name: string }
-  | { kind: "new-sub-agent"; agent: Agent };
+  | { kind: "new-sub-agent"; agent: Agent }
+  | { kind: "hooks"; agent: Agent };
 
 interface Props {
   modal: ModalState;
@@ -96,11 +98,14 @@ export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgent
   if (modal.kind === "sub-agent") {
     return <SubAgentViewer agentId={modal.agent.id} subName={modal.name} onClose={onClose} />;
   }
-  return (
-    <NewSubAgentModal
-      agentId={modal.agent.id}
-      onClose={onClose}
-      onCreated={(name) => onOpenSubAgent(modal.agent, name)}
-    />
-  );
+  if (modal.kind === "new-sub-agent") {
+    return (
+      <NewSubAgentModal
+        agentId={modal.agent.id}
+        onClose={onClose}
+        onCreated={(name) => onOpenSubAgent(modal.agent, name)}
+      />
+    );
+  }
+  return <HooksManager agentId={modal.agent.id} onClose={onClose} />;
 }

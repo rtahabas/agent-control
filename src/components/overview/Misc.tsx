@@ -41,10 +41,21 @@ export function SubAgents({
   );
 }
 
-export function Hooks({ hooks }: { hooks: State["hooks"] }) {
+export function Hooks({
+  hooks,
+  onManageClick,
+}: {
+  hooks: State["hooks"];
+  onManageClick?: () => void;
+}) {
   return (
     <section>
-      <SectionHead title="Hooks" />
+      <div className="flex items-baseline justify-between mb-3">
+        <h2 className="text-sm font-semibold text-zinc-900 uppercase tracking-wide">Hooks</h2>
+        {onManageClick && (
+          <button type="button" onClick={onManageClick} className="text-[11px] px-2 py-0.5 rounded border border-zinc-200 text-zinc-700 hover:bg-zinc-50">Manage</button>
+        )}
+      </div>
       <div className="bg-white rounded-lg border border-zinc-200 grid grid-cols-2 divide-x divide-y divide-zinc-100">
         {Object.entries(hooks).map(([k, v]) => (
           <div key={k} className="p-3 text-center">

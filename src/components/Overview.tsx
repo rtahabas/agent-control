@@ -15,6 +15,7 @@ export function Overview({
   onNewSkill,
   onSubAgentClick,
   onNewSubAgent,
+  onManageHooks,
 }: {
   state: State | null;
   onFileClick?: (file: string) => void;
@@ -24,6 +25,7 @@ export function Overview({
   onNewSkill?: () => void;
   onSubAgentClick?: (name: string) => void;
   onNewSubAgent?: () => void;
+  onManageHooks?: () => void;
 }) {
   if (!state) return <div className="p-8 text-sm text-zinc-400">Loading state…</div>;
   return (
@@ -42,7 +44,7 @@ export function Overview({
           onSubAgentClick={onSubAgentClick}
           onNewClick={onNewSubAgent}
         />
-        <Hooks hooks={state.hooks} />
+        <Hooks hooks={state.hooks} onManageClick={onManageHooks} />
       </div>
       <Pending pending={state.pending} />
     </div>
