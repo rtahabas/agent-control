@@ -11,12 +11,15 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { spawn } from "node:child_process";
 
 interface EnvShape {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   DASHBOARD_PORT?: string;
   TELEGRAM_POLL_INTERVAL_MS?: string;
+  AGENT_DIR?: string;
+  CLAUDE_BIN?: string;
 }
 
 function loadDotEnv() {
@@ -25,7 +28,11 @@ function loadDotEnv() {
   for (const line of fs.readFileSync(file, "utf8").split("\n")) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
     if (!m) continue;
-    if (process.env[m[1]] === undefined) process.env[m[1]] = m[2];
+    let val = m[2].trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (process.env[m[1]] === undefined) process.env[m[1]] = val;
   }
 }
 
@@ -45,6 +52,9 @@ if (!TOKEN || !CHAT) {
 const ALLOWED_CHAT_ID = String(CHAT);
 const API = `https://api.telegram.org/bot${TOKEN}`;
 const DASH = `http://localhost:${PORT}`;
+const AGENT_DIR = env.AGENT_DIR ?? "/path/to/agents/Agent-One";
+const CLAUDE_BIN = env.CLAUDE_BIN ?? "claude";
+const ASK_TIMEOUT_MS = 90_000;
 let offset = 0;
 const startedAt = Date.now();
 
@@ -59,17 +69,52 @@ interface TgUpdate {
   };
 }
 
-async function send(text: string) {
-  await fetch(`${API}/sendMessage`, {
+async function send(text: string, parseHtml = true) {
+  const chunks = chunk(text, 4000);
+  for (const c of chunks) {
+    await fetch(`${API}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: ALLOWED_CHAT_ID,
+        text: c,
+        ...(parseHtml ? { parse_mode: "HTML" } : {}),
+        disable_web_page_preview: true,
+      }),
+    }).catch((e) => console.error("send failed:", e));
+  }
+}
+
+function chunk(s: string, n: number): string[] {
+  if (s.length <= n) return [s];
+  const out: string[] = [];
+  for (let i = 0; i < s.length; i += n) out.push(s.slice(i, i + n));
+  return out;
+}
+
+async function sendTyping() {
+  await fetch(`${API}/sendChatAction`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: ALLOWED_CHAT_ID,
-      text: text.slice(0, 4000),
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }),
-  }).catch((e) => console.error("send failed:", e));
+    body: JSON.stringify({ chat_id: ALLOWED_CHAT_ID, action: "typing" }),
+  }).catch(() => { /* ignore */ });
+}
+
+async function askClaude(prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(CLAUDE_BIN, ["-p", "--add-dir", AGENT_DIR, prompt], {
+      timeout: ASK_TIMEOUT_MS,
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => { stdout += d.toString(); });
+    child.stderr.on("data", (d) => { stderr += d.toString(); });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve(stdout.trim());
+      else reject(new Error(stderr.trim() || `claude exited ${code}`));
+    });
+  });
 }
 
 async function getJson<T>(url: string): Promise<T> {
@@ -93,6 +138,9 @@ function fmtNum(n: number): string {
 
 const HELP = [
   "<b>Agent Control bot</b>",
+  "",
+  "Free text → forwarded to Claude with Agent-One context.",
+  "Slash commands → quick read-only actions:",
   "",
   "/help — this list",
   "/agents — registered agents",
@@ -182,18 +230,34 @@ async function handleCommand(cmd: string, arg: string): Promise<string> {
 async function processUpdate(u: TgUpdate) {
   const m = u.message;
   if (!m || !m.text) return;
-  if (String(m.chat.id) !== ALLOWED_CHAT_ID) {
-    console.warn(`rejected chat ${m.chat.id}`);
+  const got = String(m.chat.id);
+  if (got !== ALLOWED_CHAT_ID) {
+    console.warn(`rejected chat <${got}> (allowed=<${ALLOWED_CHAT_ID}>)`);
     return;
   }
-  const match = m.text.trim().match(/^\/(\w+)(?:@\w+)?(?:\s+(.*))?$/);
-  if (!match) return; // L3 guard: free text ignored
-  const reply = await handleCommand(match[1].toLowerCase(), (match[2] ?? "").trim());
-  await send(reply);
+  const text = m.text.trim();
+  const match = text.match(/^\/(\w+)(?:@\w+)?(?:\s+(.*))?$/);
+  if (match) {
+    const reply = await handleCommand(match[1].toLowerCase(), (match[2] ?? "").trim());
+    await send(reply);
+    return;
+  }
+  // Free text → forward to Claude (allowlist already enforced above)
+  void sendTyping();
+  const heartbeat = setInterval(() => void sendTyping(), 4000);
+  try {
+    const reply = await askClaude(text);
+    await send(reply || "(empty reply)", false);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    await send(`error from claude:\n<code>${escape(msg).slice(0, 1500)}</code>`);
+  } finally {
+    clearInterval(heartbeat);
+  }
 }
 
 async function pollLoop() {
-  console.log(`telegram-bot polling every ${POLL_MS}ms · dashboard ${DASH} · chat ${ALLOWED_CHAT_ID}`);
+  console.log(`telegram-bot polling every ${POLL_MS}ms · dashboard ${DASH} · allowed chat <${ALLOWED_CHAT_ID}> (len=${ALLOWED_CHAT_ID.length})`);
   await send("<b>[bot online]</b> Try /help.");
   while (true) {
     try {
