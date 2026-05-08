@@ -1,6 +1,7 @@
 export type Tab =
   | "overview"
   | "tokens"
+  | "activity"
   | "skills"
   | "memory"
   | "sub-agents"
@@ -25,6 +26,7 @@ export const NAV: NavSection[] = [
     items: [
       { tab: "overview", label: "Overview" },
       { tab: "tokens", label: "Tokens & Cost" },
+      { tab: "activity", label: "Activity Log" },
       { tab: "skills", label: "Skills" },
       { tab: "memory", label: "Memory" },
     ],

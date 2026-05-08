@@ -5,6 +5,7 @@ import type { Tab } from "@/lib/tabs";
 import { ChatPanel } from "../ChatPanel";
 import { OverviewPage } from "./OverviewPage";
 import { TokensPage } from "./TokensPage";
+import { ActivityPage } from "./ActivityPage";
 import { SkillsPage } from "./SkillsPage";
 import { MemoryPage } from "./MemoryPage";
 import { SubAgentsPage } from "./SubAgentsPage";
@@ -47,6 +48,8 @@ export function TabRouter({ tab, state, agents, selectedAgent, selectedId, actio
       return <OverviewPage state={state} agentId={a?.id ?? null} />;
     case "tokens":
       return <TokensPage agentId={a?.id ?? null} />;
+    case "activity":
+      return <ActivityPage agentId={a?.id ?? null} />;
     case "skills":
       return (
         <SkillsPage
