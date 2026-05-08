@@ -58,8 +58,11 @@ export default function Home() {
   useEffect(() => {
     if (!hydrated) return;
     loadAgents();
-    const a = setInterval(loadAgents, 5000);
-    return () => clearInterval(a);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadAgents();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [hydrated, loadAgents]);
 
   useEffect(() => {
