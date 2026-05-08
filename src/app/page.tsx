@@ -2,28 +2,28 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
-import { Overview } from "@/components/Overview";
-import { ChatPanel } from "@/components/ChatPanel";
 import { AppModals, type ModalState } from "@/components/AppModals";
-import { TopBar, type ConnState, type View } from "@/components/TopBar";
+import { TopBar, type ConnState } from "@/components/TopBar";
+import { TabRouter } from "@/components/pages/TabRouter";
 import type { Agent, State } from "@/lib/api";
 import { fetchAgents, fetchState } from "@/lib/api";
 import { persistedAge, usePersistedState } from "@/lib/persisted-state";
+import { isTab, type Tab } from "@/lib/tabs";
 
 const NONE: ModalState = { kind: "none" };
 
 export default function Home() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [state, setState] = useState<State | null>(null);
-  const [view, setView, vh] = usePersistedState<View>("app:view", "overview", (raw) =>
-    raw === "chat" ? "chat" : "overview"
+  const [tab, setTab, th] = usePersistedState<Tab>("app:tab", "overview", (raw) =>
+    raw !== null && isTab(raw) ? raw : "overview"
   );
   const [selectedId, setSelectedId, sh] = usePersistedState<string | null>(
     "app:selectedId",
     null,
     (raw) => raw
   );
-  const hydrated = vh && sh;
+  const hydrated = th && sh;
   const [conn, setConn] = useState<ConnState>("loading");
   const [lastFetchTs, setLastFetchTs] = useState<number | null>(null);
   const [age, setAge] = useState("");
@@ -37,30 +37,21 @@ export default function Home() {
         if (cur && list.some((a) => a.id === cur)) return cur;
         return list[0]?.id ?? null;
       });
-    } catch (e) {
-      console.error("agents:", e);
-    }
+    } catch (e) { console.error("agents:", e); }
   }, [setSelectedId]);
 
   const loadState = useCallback(async (agentId: string | null) => {
     setConn("loading");
     try {
       const s = await fetchState(agentId);
-      setState(s);
-      setLastFetchTs(Date.now());
-      setConn("ok");
-    } catch (e) {
-      console.error("state:", e);
-      setConn("error");
-    }
+      setState(s); setLastFetchTs(Date.now()); setConn("ok");
+    } catch (e) { console.error("state:", e); setConn("error"); }
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
     loadAgents();
-    const onVisible = () => {
-      if (document.visibilityState === "visible") loadAgents();
-    };
+    const onVisible = () => { if (document.visibilityState === "visible") loadAgents(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [hydrated, loadAgents]);
@@ -68,9 +59,7 @@ export default function Home() {
   useEffect(() => {
     if (!hydrated) return;
     loadState(selectedId);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") loadState(selectedId);
-    };
+    const onVisible = () => { if (document.visibilityState === "visible") loadState(selectedId); };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [hydrated, loadState, selectedId]);
@@ -82,46 +71,35 @@ export default function Home() {
   }, [lastFetchTs]);
 
   const selectedAgent = agents.find((a) => a.id === selectedId) ?? null;
+  const refresh = () => { loadAgents(); loadState(selectedId); };
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        agents={agents}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        onChange={loadAgents}
-        onAddClick={() => setModal({ kind: "create" })}
-        onEditClick={(agent) => setModal({ kind: "edit", agent })}
-        onDeleteClick={(agent) => setModal({ kind: "delete", agent })}
-      />
+      <Sidebar tab={tab} onTabChange={setTab} selectedAgent={selectedAgent} agentCount={agents.length} />
       <main className="flex-1 flex flex-col min-w-0">
-        <TopBar
-          selectedAgent={selectedAgent}
-          view={view}
-          onViewChange={setView}
-          conn={conn}
-          age={age}
-          onRefresh={() => { loadAgents(); loadState(selectedId); }}
-        />
-        <div className="flex-1 min-h-0 relative">
-          <div className={`absolute inset-0 overflow-y-auto bg-zinc-50 ${view === "overview" ? "" : "hidden"}`}>
-            <Overview
-              state={state}
-              agentId={selectedAgent?.id ?? null}
-              onFileClick={(file) => { if (selectedAgent) setModal({ kind: "file", agent: selectedAgent, file }); }}
-              onNewMemory={() => { if (selectedAgent) setModal({ kind: "new-file", agent: selectedAgent }); }}
-              onBrowseMemory={() => { if (selectedAgent) setModal({ kind: "browse", agent: selectedAgent }); }}
-              onSkillClick={(name) => { if (selectedAgent) setModal({ kind: "skill", agent: selectedAgent, name }); }}
-              onSkillConsolidate={(name) => { if (selectedAgent) setModal({ kind: "skill", agent: selectedAgent, name, consolidate: true }); }}
-              onNewSkill={() => { if (selectedAgent) setModal({ kind: "new-skill", agent: selectedAgent }); }}
-              onSubAgentClick={(name) => { if (selectedAgent) setModal({ kind: "sub-agent", agent: selectedAgent, name }); }}
-              onNewSubAgent={() => { if (selectedAgent) setModal({ kind: "new-sub-agent", agent: selectedAgent }); }}
-              onManageHooks={() => { if (selectedAgent) setModal({ kind: "hooks", agent: selectedAgent }); }}
-            />
-          </div>
-          <div className={`absolute inset-0 ${view === "chat" ? "" : "hidden"}`}>
-            <ChatPanel agent={selectedAgent} />
-          </div>
+        <TopBar tab={tab} selectedAgent={selectedAgent} conn={conn} age={age} onRefresh={refresh} />
+        <div className="flex-1 min-h-0 overflow-y-auto bg-zinc-50">
+          <TabRouter
+            tab={tab}
+            state={state}
+            agents={agents}
+            selectedAgent={selectedAgent}
+            selectedId={selectedId}
+            actions={{
+              onOpenFile: (agent, file) => setModal({ kind: "file", agent, file }),
+              onNewMemory: (agent) => setModal({ kind: "new-file", agent }),
+              onSkillClick: (agent, name) => setModal({ kind: "skill", agent, name }),
+              onConsolidateSkill: (agent, name) => setModal({ kind: "skill", agent, name, consolidate: true }),
+              onNewSkill: (agent) => setModal({ kind: "new-skill", agent }),
+              onSubAgentClick: (agent, name) => setModal({ kind: "sub-agent", agent, name }),
+              onNewSubAgent: (agent) => setModal({ kind: "new-sub-agent", agent }),
+              onManageHooks: (agent) => setModal({ kind: "hooks", agent }),
+              onAddAgent: () => setModal({ kind: "create" }),
+              onEditAgent: (agent) => setModal({ kind: "edit", agent }),
+              onDeleteAgent: (agent) => setModal({ kind: "delete", agent }),
+              onSelectAgent: setSelectedId,
+            }}
+          />
         </div>
       </main>
       <AppModals

@@ -1,8 +1,9 @@
 "use client";
 
 import type { Agent } from "@/lib/api";
+import type { Tab } from "@/lib/tabs";
+import { tabLabel } from "@/lib/tabs";
 
-export type View = "overview" | "chat";
 export type ConnState = "loading" | "ok" | "error";
 
 const CONN_STYLE: Record<ConnState, string> = {
@@ -24,30 +25,31 @@ const CONN_TEXT: Record<ConnState, string> = {
 };
 
 interface Props {
+  tab: Tab;
   selectedAgent: Agent | null;
-  view: View;
-  onViewChange: (v: View) => void;
   conn: ConnState;
   age: string;
   onRefresh: () => void;
 }
 
-export function TopBar({ selectedAgent, view, onViewChange, conn, age, onRefresh }: Props) {
+export function TopBar({ tab, selectedAgent, conn, age, onRefresh }: Props) {
   return (
-    <header className="border-b border-zinc-200 bg-white px-5 py-3 flex items-center gap-3 shrink-0">
-      <nav className="flex gap-1 bg-zinc-100 p-1 rounded-lg">
-        <Tab active={view === "overview"} onClick={() => onViewChange("overview")}>
-          Overview
-        </Tab>
-        <Tab
-          active={view === "chat"}
-          disabled={!selectedAgent}
-          onClick={() => onViewChange("chat")}
-        >
-          Chat{selectedAgent ? ` · ${selectedAgent.name}` : ""}
-        </Tab>
-      </nav>
+    <header className="border-b border-zinc-200 bg-white px-6 py-3 flex items-center gap-3 shrink-0">
+      <div>
+        <div className="text-[11px] text-zinc-400 mono">
+          Dashboard <span className="px-1">›</span>{" "}
+          <span className="text-zinc-700">{tabLabel(tab)}</span>
+        </div>
+        <h1 className="text-base font-semibold text-zinc-900 mt-0.5">
+          {tabLabel(tab)}
+        </h1>
+      </div>
       <div className="flex-1" />
+      {selectedAgent && (
+        <div className="text-xs text-zinc-500 mr-2">
+          agent <span className="mono text-zinc-900">{selectedAgent.name}</span>
+        </div>
+      )}
       <span className="text-xs text-zinc-400 mono">{age}</span>
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${CONN_STYLE[conn]}`}
@@ -62,29 +64,5 @@ export function TopBar({ selectedAgent, view, onViewChange, conn, age, onRefresh
         Refresh
       </button>
     </header>
-  );
-}
-
-function Tab({
-  active,
-  disabled,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-3 py-1 text-xs font-medium rounded-md transition disabled:opacity-40 disabled:cursor-not-allowed ${
-        active ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
