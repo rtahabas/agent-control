@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchSettings, saveSettings } from "@/lib/settings-api";
+import { TelegramSettings } from "./TelegramSettings";
 
 interface Props {
   agentId: string | null;
+  agentName?: string;
 }
 
-export function SettingsPage({ agentId }: Props) {
+export function SettingsPage({ agentId, agentName }: Props) {
   const [content, setContent] = useState<string | null>(null);
   const [original, setOriginal] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,11 +40,17 @@ export function SettingsPage({ agentId }: Props) {
   };
 
   if (!agentId) {
-    return <div className="p-8 text-sm text-zinc-400">Pick an agent in <span className="text-zinc-700">Agents</span> first.</div>;
+    return (
+      <div className="p-6 max-w-4xl space-y-5">
+        <TelegramSettings />
+        <div className="text-sm text-zinc-400">Pick an agent in <span className="text-zinc-700">Agents</span> to edit its <span className="mono">.claude/settings.json</span>.</div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-6 max-w-4xl space-y-5">
+      <TelegramSettings agentName={agentName} />
       <div className="flex items-baseline justify-between mb-3">
         <div>
           <h2 className="text-sm font-semibold text-zinc-900 uppercase tracking-wide">Settings</h2>
