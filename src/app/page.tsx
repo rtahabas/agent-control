@@ -104,6 +104,7 @@ export default function Home() {
           <div className={`absolute inset-0 overflow-y-auto bg-zinc-50 ${view === "overview" ? "" : "hidden"}`}>
             <Overview
               state={state}
+              agentId={selectedAgent?.id ?? null}
               onFileClick={(file) => { if (selectedAgent) setModal({ kind: "file", agent: selectedAgent, file }); }}
               onNewMemory={() => { if (selectedAgent) setModal({ kind: "new-file", agent: selectedAgent }); }}
               onBrowseMemory={() => { if (selectedAgent) setModal({ kind: "browse", agent: selectedAgent }); }}
