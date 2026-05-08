@@ -17,6 +17,7 @@ export function Overview({
   onSubAgentClick,
   onNewSubAgent,
   onManageHooks,
+  onSkillConsolidate,
 }: {
   state: State | null;
   onFileClick?: (file: string) => void;
@@ -27,6 +28,7 @@ export function Overview({
   onSubAgentClick?: (name: string) => void;
   onNewSubAgent?: () => void;
   onManageHooks?: () => void;
+  onSkillConsolidate?: (name: string) => void;
 }) {
   if (!state) return <div className="p-8 text-sm text-zinc-400">Loading state…</div>;
   return (
@@ -38,7 +40,13 @@ export function Overview({
       />
       <Projects projects={state.projects} />
       <div id="overview-skills">
-        <Skills skills={state.skills} onSkillClick={onSkillClick} onNewClick={onNewSkill} />
+        <Skills
+          skills={state.skills}
+          timeline={state.skill_timeline}
+          onSkillClick={onSkillClick}
+          onNewClick={onNewSkill}
+          onConsolidateClick={onSkillConsolidate}
+        />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Memory

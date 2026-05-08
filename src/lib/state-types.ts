@@ -58,6 +58,13 @@ export interface Health {
   stale_daily_logs: StaleDailyLog[];
 }
 
+export interface TimelinePoint {
+  date: string;
+  count: number;
+}
+
+export type SkillTimeline = Record<string, TimelinePoint[]>;
+
 export interface State {
   generated: string;
   projects: Project[];
@@ -67,4 +74,5 @@ export interface State {
   pending: string[];
   hooks: { SessionStart: number; PreToolUse: number; PostToolUse: number; Stop: number };
   health: Health;
+  skill_timeline: SkillTimeline;
 }

@@ -9,6 +9,8 @@ export type {
   Memory,
   StaleDailyLog,
   Health,
+  TimelinePoint,
+  SkillTimeline,
   State,
 } from "./state-types";
 

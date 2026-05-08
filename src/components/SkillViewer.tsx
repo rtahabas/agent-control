@@ -8,6 +8,7 @@ import { ModalShell } from "./editor/Field";
 interface Props {
   agentId: string;
   skillName: string;
+  consolidate?: boolean;
   onClose: () => void;
 }
 
@@ -32,7 +33,7 @@ function splitFrontmatter(text: string): Split {
   return { meta, body: m[2] };
 }
 
-export function SkillViewer({ agentId, skillName, onClose }: Props) {
+export function SkillViewer({ agentId, skillName, consolidate, onClose }: Props) {
   const [content, setContent] = useState<string | null>(null);
   const [original, setOriginal] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("read");
@@ -96,6 +97,13 @@ export function SkillViewer({ agentId, skillName, onClose }: Props) {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 bg-zinc-50">
+          {consolidate && (
+            <div className="mb-4 text-xs px-3 py-2 rounded border bg-amber-50 border-amber-200 text-amber-900">
+              No activity in 30 days. Consider merging into another skill or
+              deleting if redundant. Edit the body below or use{" "}
+              <span className="mono">Delete</span> to remove.
+            </div>
+          )}
           {loading && <div className="text-sm text-zinc-500">Loading…</div>}
           {!loading && split && mode === "read" && (
             <>

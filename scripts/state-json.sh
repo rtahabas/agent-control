@@ -182,6 +182,25 @@ else
   STALE_DAILY_JSON="[$(IFS=,; echo "${STALE_LINES[*]}")]"
 fi
 
+# ----- skill timeline (per-skill 30-day daily counts) -----
+SKILL_LOG="$AGENT_ROOT/memory/memory/skill-activity.log"
+TIMELINE_CUTOFF=$(date -u -v-30d +%Y-%m-%d 2>/dev/null || date -u -d "30 days ago" +%Y-%m-%d)
+TIMELINE_JSON="{}"
+if [ -f "$SKILL_LOG" ]; then
+  GROUPED=$(
+    awk -v cutoff="$TIMELINE_CUTOFF" '
+      BEGIN { FS=" \\| " }
+      /^#/ { next }
+      NF < 2 { next }
+      { date = substr($1, 1, 10); if (date < cutoff) next; print $2, date }
+    ' "$SKILL_LOG" \
+    | sort | uniq -c \
+    | awk '{ printf "{\"skill\":\"%s\",\"date\":\"%s\",\"count\":%d}\n", $2, $3, $1 }' \
+    | jq -s 'group_by(.skill) | map({key: .[0].skill, value: map({date, count})}) | from_entries' 2>/dev/null
+  )
+  [ -n "$GROUPED" ] && TIMELINE_JSON="$GROUPED"
+fi
+
 jq -n \
   --arg generated "$GENERATED" \
   --argjson projects "$PROJECTS_JSON" \
@@ -204,6 +223,7 @@ jq -n \
   --argjson hot_lines "$HOT_LINES" \
   --argjson hot_cap "$HOT_CAP" \
   --argjson stale_daily "$STALE_DAILY_JSON" \
+  --argjson timeline "$TIMELINE_JSON" \
   '{
     generated: $generated,
     projects: $projects,
@@ -223,5 +243,6 @@ jq -n \
     hooks: { SessionStart: $h_start, PreToolUse: $h_pre, PostToolUse: $h_post, Stop: $h_stop },
     health: {
       stale_daily_logs: $stale_daily
-    }
+    },
+    skill_timeline: $timeline
   }'
