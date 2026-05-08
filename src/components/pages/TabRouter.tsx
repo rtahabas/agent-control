@@ -78,7 +78,7 @@ export function TabRouter({ tab, state, agents, selectedAgent, selectedId, actio
     case "hooks":
       return <HooksPage state={state} onManage={bind(a, actions.onManageHooks)} />;
     case "settings":
-      return <SettingsPage agentId={a?.id ?? null} />;
+      return <SettingsPage agentId={a?.id ?? null} agentName={a?.name} />;
     case "agents":
       return (
         <AgentsPage
