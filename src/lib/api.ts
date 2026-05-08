@@ -126,47 +126,6 @@ export async function fetchState(agentId?: string | null): Promise<State> {
   return r.json();
 }
 
-export interface SkillCatalogEntry {
-  name: string;
-  description: string;
-}
-
-export async function fetchSkillCatalog(): Promise<SkillCatalogEntry[]> {
-  const r = await fetch("/api/skills/catalog", { cache: "no-store" });
-  if (!r.ok) throw new Error("skill catalog fetch failed: " + r.status);
-  const d = await r.json();
-  return (d.skills as SkillCatalogEntry[]) ?? [];
-}
-
-export interface ScaffoldIdentity {
-  role?: string;
-  mission?: string;
-  language?: string;
-  personality?: string;
-  human?: string;
-}
-
-export interface ScaffoldAgentBody {
-  id?: string;
-  name: string;
-  path: string;
-  notes?: string | null;
-  identity: ScaffoldIdentity;
-  skills: string[];
-  template?: string;
-}
-
-export async function scaffoldAgent(body: ScaffoldAgentBody): Promise<Agent> {
-  const r = await fetch("/api/agents/scaffold", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || "scaffold failed");
-  return data.agent as Agent;
-}
-
 export interface PendingItem {
   raw: string;
   title: string;

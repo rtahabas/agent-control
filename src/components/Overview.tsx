@@ -6,14 +6,20 @@ import { Skills } from "./overview/Skills";
 import { Memory } from "./overview/Memory";
 import { SubAgents, Hooks, Pending } from "./overview/Misc";
 
-export function Overview({ state }: { state: State | null }) {
+export function Overview({
+  state,
+  onFileClick,
+}: {
+  state: State | null;
+  onFileClick?: (file: string) => void;
+}) {
   if (!state) return <div className="p-8 text-sm text-zinc-400">Loading state…</div>;
   return (
     <div className="p-6 space-y-6 max-w-6xl">
       <Projects projects={state.projects} />
       <Skills skills={state.skills} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Memory memory={state.memory} />
+        <Memory memory={state.memory} onFileClick={onFileClick} />
         <SubAgents agents={state.sub_agents} />
         <Hooks hooks={state.hooks} />
       </div>

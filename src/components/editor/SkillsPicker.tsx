@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchSkillCatalog, type SkillCatalogEntry } from "@/lib/api";
+import { fetchSkillCatalog, type SkillCatalogEntry } from "@/lib/skills-api";
 
 interface Props {
   selected: Set<string>;

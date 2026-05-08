@@ -4,18 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Overview } from "@/components/Overview";
 import { ChatPanel } from "@/components/ChatPanel";
-import { AgentEditor } from "@/components/AgentEditor";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { AppModals, type ModalState } from "@/components/AppModals";
 import { TopBar, type ConnState, type View } from "@/components/TopBar";
 import type { Agent, State } from "@/lib/api";
-import { fetchAgents, fetchState, deleteAgent as apiDeleteAgent } from "@/lib/api";
+import { fetchAgents, fetchState } from "@/lib/api";
 import { persistedAge, usePersistedState } from "@/lib/persisted-state";
-
-type ModalState =
-  | { kind: "none" }
-  | { kind: "create" }
-  | { kind: "edit"; agent: Agent }
-  | { kind: "delete"; agent: Agent };
 
 const NONE: ModalState = { kind: "none" };
 
@@ -106,42 +99,30 @@ export default function Home() {
         />
         <div className="flex-1 min-h-0 relative">
           <div className={`absolute inset-0 overflow-y-auto bg-zinc-50 ${view === "overview" ? "" : "hidden"}`}>
-            <Overview state={state} />
+            <Overview
+              state={state}
+              onFileClick={(file) => {
+                if (selectedAgent) setModal({ kind: "file", agent: selectedAgent, file });
+              }}
+            />
           </div>
           <div className={`absolute inset-0 ${view === "chat" ? "" : "hidden"}`}>
             <ChatPanel agent={selectedAgent} />
           </div>
         </div>
       </main>
-      {modal.kind === "create" && (
-        <AgentEditor
-          mode="create"
-          onClose={() => setModal(NONE)}
-          onSaved={(saved) => { loadAgents(); setSelectedId(saved.id); }}
-        />
-      )}
-      {modal.kind === "edit" && (
-        <AgentEditor
-          mode="edit"
-          agent={modal.agent}
-          onClose={() => setModal(NONE)}
-          onSaved={() => loadAgents()}
-        />
-      )}
-      {modal.kind === "delete" && (
-        <ConfirmDialog
-          title={`Delete ${modal.agent.name}?`}
-          message={`Registry entry will be removed. The directory at ${modal.agent.path} is NOT touched.`}
-          confirmLabel="Delete"
-          destructive
-          onConfirm={async () => {
-            await apiDeleteAgent(modal.agent.id);
-            if (selectedId === modal.agent.id) setSelectedId(null);
-            await loadAgents();
-          }}
-          onClose={() => setModal(NONE)}
-        />
-      )}
+      <AppModals
+        modal={modal}
+        selectedId={selectedId}
+        onClose={() => setModal(NONE)}
+        onAgentSaved={(saved) => { loadAgents(); setSelectedId(saved.id); setModal(NONE); }}
+        onAgentEdited={() => { loadAgents(); setModal(NONE); }}
+        onAgentDeleted={async (id) => {
+          if (selectedId === id) setSelectedId(null);
+          await loadAgents();
+          setModal(NONE);
+        }}
+      />
     </div>
   );
 }

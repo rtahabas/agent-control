@@ -6,7 +6,13 @@ import { SectionHead } from "./Section";
 const CATS = ["feedback", "project", "pending", "other"] as const;
 type Cat = (typeof CATS)[number];
 
-export function Memory({ memory }: { memory: MemoryState }) {
+export function Memory({
+  memory,
+  onFileClick,
+}: {
+  memory: MemoryState;
+  onFileClick?: (file: string) => void;
+}) {
   const total = CATS.reduce((a, k) => a + memory.categories[k], 0) || 1;
   return (
     <section>
@@ -32,13 +38,24 @@ export function Memory({ memory }: { memory: MemoryState }) {
           ))}
         </div>
         <div className="pt-3 border-t border-zinc-100">
-          <div className="text-xs text-zinc-500 mb-1.5">Index files ({memory.indexes.length})</div>
+          <div className="text-xs text-zinc-500 mb-1.5">Core files ({memory.indexes.length})</div>
           <div className="flex flex-wrap gap-1">
-            {memory.indexes.map((f) => (
-              <span key={f} className="text-xs mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600">
-                {f}
-              </span>
-            ))}
+            {memory.indexes.map((f) =>
+              onFileClick ? (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => onFileClick(f)}
+                  className="text-xs mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900 transition"
+                >
+                  {f}
+                </button>
+              ) : (
+                <span key={f} className="text-xs mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600">
+                  {f}
+                </span>
+              )
+            )}
           </div>
         </div>
       </div>

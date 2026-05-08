@@ -135,7 +135,7 @@ MEM_OTHER=$((MEM_TOTAL - MEM_FB - MEM_PROJ - MEM_PEND))
 
 INDEX_FILES=()
 while IFS= read -r f; do INDEX_FILES+=("$(basename "$f")"); done \
-  < <(find "$MEMORY_DIR" -maxdepth 1 \( -name 'INDEX*.md' -o -name 'AGENTSKILLS.md' -o -name 'MEMORY.md' \) -type f 2>/dev/null | sort)
+  < <(find "$MEMORY_DIR" -maxdepth 1 \( -name 'INDEX*.md' -o -name 'AGENTSKILLS.md' -o -name 'MEMORY.md' -o -name 'GUARDRAILS.md' -o -name 'HEARTBEAT.md' -o -name 'today.md' -o -name 'commitments.md' \) -type f 2>/dev/null | sort)
 INDEX_JSON=$(printf '%s\n' "${INDEX_FILES[@]:-}" | jq -R . | jq -s 'map(select(. != ""))')
 
 PENDING_JSON=$(

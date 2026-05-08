@@ -1,5 +1,6 @@
 import type { Agent } from "./api";
-import { createAgent, scaffoldAgent } from "./api";
+import { createAgent } from "./api";
+import { scaffoldAgent } from "./scaffold-api";
 import type { IdentityState } from "@/components/editor/PersonalityFields";
 
 export type CreateMode = "register" | "scaffold";
