@@ -26,3 +26,21 @@ export async function saveMemoryFile(agentId: string, file: string, content: str
   const d = await r.json();
   if (!r.ok) throw new Error(d.error || "memory file save failed");
 }
+
+export async function createMemoryFile(agentId: string, file: string, content: string): Promise<void> {
+  const url = `/api/agents/${encodeURIComponent(agentId)}/memory/file?path=${encodeURIComponent(file)}`;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "memory file create failed");
+}
+
+export async function deleteMemoryFile(agentId: string, file: string): Promise<void> {
+  const url = `/api/agents/${encodeURIComponent(agentId)}/memory/file?path=${encodeURIComponent(file)}`;
+  const r = await fetch(url, { method: "DELETE" });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "memory file delete failed");
+}

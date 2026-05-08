@@ -5,13 +5,17 @@ import { deleteAgent as apiDeleteAgent } from "@/lib/api";
 import { AgentEditor } from "./AgentEditor";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FileViewer } from "./FileViewer";
+import { NewFileModal } from "./NewFileModal";
+import { MemoryBrowser } from "./MemoryBrowser";
 
 export type ModalState =
   | { kind: "none" }
   | { kind: "create" }
   | { kind: "edit"; agent: Agent }
   | { kind: "delete"; agent: Agent }
-  | { kind: "file"; agent: Agent; file: string };
+  | { kind: "file"; agent: Agent; file: string }
+  | { kind: "new-file"; agent: Agent }
+  | { kind: "browse"; agent: Agent };
 
 interface Props {
   modal: ModalState;
@@ -20,22 +24,16 @@ interface Props {
   onAgentSaved: (saved: Agent) => void;
   onAgentEdited: () => void;
   onAgentDeleted: (id: string) => Promise<void>;
+  onOpenFile: (agent: Agent, file: string) => void;
 }
 
-export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgentDeleted }: Props) {
+export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgentDeleted, onOpenFile }: Props) {
   if (modal.kind === "none") return null;
   if (modal.kind === "create") {
     return <AgentEditor mode="create" onClose={onClose} onSaved={onAgentSaved} />;
   }
   if (modal.kind === "edit") {
-    return (
-      <AgentEditor
-        mode="edit"
-        agent={modal.agent}
-        onClose={onClose}
-        onSaved={onAgentEdited}
-      />
-    );
+    return <AgentEditor mode="edit" agent={modal.agent} onClose={onClose} onSaved={onAgentEdited} />;
   }
   if (modal.kind === "delete") {
     return (
@@ -52,5 +50,23 @@ export function AppModals({ modal, onClose, onAgentSaved, onAgentEdited, onAgent
       />
     );
   }
-  return <FileViewer agentId={modal.agent.id} file={modal.file} onClose={onClose} />;
+  if (modal.kind === "file") {
+    return <FileViewer agentId={modal.agent.id} file={modal.file} onClose={onClose} />;
+  }
+  if (modal.kind === "new-file") {
+    return (
+      <NewFileModal
+        agentId={modal.agent.id}
+        onClose={onClose}
+        onCreated={(file) => onOpenFile(modal.agent, file)}
+      />
+    );
+  }
+  return (
+    <MemoryBrowser
+      agentId={modal.agent.id}
+      onClose={onClose}
+      onSelect={(file) => onOpenFile(modal.agent, file)}
+    />
+  );
 }

@@ -101,9 +101,9 @@ export default function Home() {
           <div className={`absolute inset-0 overflow-y-auto bg-zinc-50 ${view === "overview" ? "" : "hidden"}`}>
             <Overview
               state={state}
-              onFileClick={(file) => {
-                if (selectedAgent) setModal({ kind: "file", agent: selectedAgent, file });
-              }}
+              onFileClick={(file) => { if (selectedAgent) setModal({ kind: "file", agent: selectedAgent, file }); }}
+              onNewMemory={() => { if (selectedAgent) setModal({ kind: "new-file", agent: selectedAgent }); }}
+              onBrowseMemory={() => { if (selectedAgent) setModal({ kind: "browse", agent: selectedAgent }); }}
             />
           </div>
           <div className={`absolute inset-0 ${view === "chat" ? "" : "hidden"}`}>
@@ -122,6 +122,7 @@ export default function Home() {
           await loadAgents();
           setModal(NONE);
         }}
+        onOpenFile={(agent, file) => setModal({ kind: "file", agent, file })}
       />
     </div>
   );

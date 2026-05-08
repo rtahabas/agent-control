@@ -9,9 +9,13 @@ type Cat = (typeof CATS)[number];
 export function Memory({
   memory,
   onFileClick,
+  onNewClick,
+  onBrowseClick,
 }: {
   memory: MemoryState;
   onFileClick?: (file: string) => void;
+  onNewClick?: () => void;
+  onBrowseClick?: () => void;
 }) {
   const total = CATS.reduce((a, k) => a + memory.categories[k], 0) || 1;
   return (
@@ -38,7 +42,17 @@ export function Memory({
           ))}
         </div>
         <div className="pt-3 border-t border-zinc-100">
-          <div className="text-xs text-zinc-500 mb-1.5">Core files ({memory.indexes.length})</div>
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="text-xs text-zinc-500">Core files ({memory.indexes.length})</div>
+            <div className="flex items-center gap-1">
+              {onNewClick && (
+                <button type="button" onClick={onNewClick} className="text-[11px] px-2 py-0.5 rounded border border-zinc-200 text-zinc-700 hover:bg-zinc-50">+ New</button>
+              )}
+              {onBrowseClick && (
+                <button type="button" onClick={onBrowseClick} className="text-[11px] px-2 py-0.5 rounded border border-zinc-200 text-zinc-700 hover:bg-zinc-50">All files</button>
+              )}
+            </div>
+          </div>
           <div className="flex flex-wrap gap-1">
             {memory.indexes.map((f) =>
               onFileClick ? (

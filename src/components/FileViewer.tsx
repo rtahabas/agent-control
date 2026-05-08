@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchMemoryFile, saveMemoryFile } from "@/lib/memory-api";
+import { fetchMemoryFile, saveMemoryFile, deleteMemoryFile } from "@/lib/memory-api";
 import { Markdown } from "./Markdown";
 import { ModalShell } from "./editor/Field";
 
@@ -79,6 +79,20 @@ export function FileViewer({ agentId, file, onClose }: Props) {
     setError(null);
   };
 
+  const remove = async () => {
+    if (saving) return;
+    if (!confirm(`Delete ${file}? This cannot be undone.`)) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await deleteMemoryFile(agentId, file);
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setSaving(false);
+    }
+  };
+
   return (
     <ModalShell onClose={closeIfClean} busy={busy} wide>
       <div className="flex flex-col max-h-[85vh]">
@@ -109,9 +123,13 @@ export function FileViewer({ agentId, file, onClose }: Props) {
             />
           )}
         </div>
-        {(error || mode === "edit") && (
-          <div className="px-5 py-3 border-t border-zinc-100 flex items-center justify-end gap-2">
-            {error && <div className="mr-auto text-xs text-rose-600">{error}</div>}
+        {(error || mode === "edit" || mode === "read") && (
+          <div className="px-5 py-3 border-t border-zinc-100 flex items-center gap-2">
+            {mode === "read" && !loading && (
+              <button type="button" onClick={remove} disabled={saving} className="px-3 py-1.5 text-sm font-medium rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50">Delete</button>
+            )}
+            {error && <div className="text-xs text-rose-600">{error}</div>}
+            <div className="flex-1" />
             {mode === "edit" && (
               <>
                 <button type="button" onClick={revert} disabled={saving} className="px-3 py-1.5 text-sm font-medium rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:opacity-50">Cancel</button>
