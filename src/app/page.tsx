@@ -1,65 +1,147 @@
-import Image from "next/image";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Sidebar } from "@/components/Sidebar";
+import { Overview } from "@/components/Overview";
+import { ChatPanel } from "@/components/ChatPanel";
+import { AgentEditor } from "@/components/AgentEditor";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { TopBar, type ConnState, type View } from "@/components/TopBar";
+import type { Agent, State } from "@/lib/api";
+import { fetchAgents, fetchState, deleteAgent as apiDeleteAgent } from "@/lib/api";
+import { persistedAge, usePersistedState } from "@/lib/persisted-state";
+
+type ModalState =
+  | { kind: "none" }
+  | { kind: "create" }
+  | { kind: "edit"; agent: Agent }
+  | { kind: "delete"; agent: Agent };
+
+const NONE: ModalState = { kind: "none" };
 
 export default function Home() {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [state, setState] = useState<State | null>(null);
+  const [view, setView, vh] = usePersistedState<View>("app:view", "overview", (raw) =>
+    raw === "chat" ? "chat" : "overview"
+  );
+  const [selectedId, setSelectedId, sh] = usePersistedState<string | null>(
+    "app:selectedId",
+    null,
+    (raw) => raw
+  );
+  const hydrated = vh && sh;
+  const [conn, setConn] = useState<ConnState>("loading");
+  const [lastFetchTs, setLastFetchTs] = useState<number | null>(null);
+  const [age, setAge] = useState("");
+  const [modal, setModal] = useState<ModalState>(NONE);
+
+  const loadAgents = useCallback(async () => {
+    try {
+      const list = await fetchAgents();
+      setAgents(list);
+      setSelectedId((cur) => {
+        if (cur && list.some((a) => a.id === cur)) return cur;
+        return list[0]?.id ?? null;
+      });
+    } catch (e) {
+      console.error("agents:", e);
+    }
+  }, [setSelectedId]);
+
+  const loadState = useCallback(async (agentId: string | null) => {
+    setConn("loading");
+    try {
+      const s = await fetchState(agentId);
+      setState(s);
+      setLastFetchTs(Date.now());
+      setConn("ok");
+    } catch (e) {
+      console.error("state:", e);
+      setConn("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    loadAgents();
+    const a = setInterval(loadAgents, 5000);
+    return () => clearInterval(a);
+  }, [hydrated, loadAgents]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    loadState(selectedId);
+    const s = setInterval(() => loadState(selectedId), 5000);
+    return () => clearInterval(s);
+  }, [hydrated, loadState, selectedId]);
+
+  useEffect(() => {
+    if (lastFetchTs === null) return;
+    const t = setInterval(() => setAge(persistedAge(lastFetchTs)), 1000);
+    return () => clearInterval(t);
+  }, [lastFetchTs]);
+
+  const selectedAgent = agents.find((a) => a.id === selectedId) ?? null;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar
+        agents={agents}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        onChange={loadAgents}
+        onAddClick={() => setModal({ kind: "create" })}
+        onEditClick={(agent) => setModal({ kind: "edit", agent })}
+        onDeleteClick={(agent) => setModal({ kind: "delete", agent })}
+      />
+      <main className="flex-1 flex flex-col min-w-0">
+        <TopBar
+          selectedAgent={selectedAgent}
+          view={view}
+          onViewChange={setView}
+          conn={conn}
+          age={age}
+          onRefresh={() => { loadAgents(); loadState(selectedId); }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="flex-1 min-h-0 relative">
+          <div className={`absolute inset-0 overflow-y-auto bg-zinc-50 ${view === "overview" ? "" : "hidden"}`}>
+            <Overview state={state} />
+          </div>
+          <div className={`absolute inset-0 ${view === "chat" ? "" : "hidden"}`}>
+            <ChatPanel agent={selectedAgent} />
+          </div>
         </div>
       </main>
+      {modal.kind === "create" && (
+        <AgentEditor
+          mode="create"
+          onClose={() => setModal(NONE)}
+          onSaved={(saved) => { loadAgents(); setSelectedId(saved.id); }}
+        />
+      )}
+      {modal.kind === "edit" && (
+        <AgentEditor
+          mode="edit"
+          agent={modal.agent}
+          onClose={() => setModal(NONE)}
+          onSaved={() => loadAgents()}
+        />
+      )}
+      {modal.kind === "delete" && (
+        <ConfirmDialog
+          title={`Delete ${modal.agent.name}?`}
+          message={`Registry entry will be removed. The directory at ${modal.agent.path} is NOT touched.`}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={async () => {
+            await apiDeleteAgent(modal.agent.id);
+            if (selectedId === modal.agent.id) setSelectedId(null);
+            await loadAgents();
+          }}
+          onClose={() => setModal(NONE)}
+        />
+      )}
     </div>
   );
 }
