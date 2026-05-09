@@ -44,7 +44,7 @@ export function ChatPanel({ agent }: { agent: Agent | null }) {
           </div>
         )}
         {session.messages.map((m) => (
-          <Bubble key={m.id} message={m} />
+          <Bubble key={m.id} message={m} onDecide={session.decide} />
         ))}
         {session.error && (
           <div className="text-xs px-3 py-2 rounded-md border border-rose-200 bg-rose-50 text-rose-700">

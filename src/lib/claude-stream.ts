@@ -1,23 +1,12 @@
-import { spawn } from "child_process";
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { makeCanUseTool, type EmitFn } from "@/lib/chat-permissions";
 
-export type EmitFn = (event: string, data: unknown) => void;
+export { decidePermission } from "@/lib/chat-permissions";
+export type { EmitFn };
 
-export function buildClaudeArgs(message: string, sessionId: string | null | undefined): string[] {
-  const args = [
-    "-p",
-    message,
-    "--output-format",
-    "stream-json",
-    "--include-partial-messages",
-    "--verbose",
-  ];
-  if (sessionId && /^[a-f0-9-]{8,}$/.test(sessionId)) {
-    args.push("--resume", sessionId);
-  }
-  return args;
-}
+interface ToolBuf { name: string; id: string | null; input: string }
 
-export function spawnClaude({
+export async function spawnClaude({
   message,
   sessionId,
   cwd,
@@ -32,92 +21,106 @@ export function spawnClaude({
   onClose: () => void;
   abortSignal: AbortSignal;
 }) {
-  const child = spawn("claude", buildClaudeArgs(message, sessionId), {
-    cwd,
-    env: { ...process.env, FORCE_COLOR: "0" },
-  });
+  const ac = new AbortController();
+  abortSignal.addEventListener("abort", () => ac.abort());
 
-  let buf = "";
-  let sessionEmitted = false;
-  let aborted = false;
+  let activeSessionId: string | null = sessionId ?? null;
+  const toolBufs: Record<number, ToolBuf> = {};
 
-  child.stdout.on("data", (chunk: Buffer) => {
-    buf += chunk.toString("utf-8");
-    let nl;
-    while ((nl = buf.indexOf("\n")) !== -1) {
-      const line = buf.slice(0, nl).trim();
-      buf = buf.slice(nl + 1);
-      if (line) {
-        const next = handleLine(line, sessionEmitted, emit);
-        if (next) sessionEmitted = true;
+  try {
+    const iter = query({
+      prompt: message,
+      options: {
+        cwd,
+        abortController: ac,
+        includePartialMessages: true,
+        ...(sessionId && /^[a-f0-9-]{8,}$/.test(sessionId) ? { resume: sessionId } : {}),
+        canUseTool: makeCanUseTool(emit, () => activeSessionId),
+      },
+    });
+
+    for await (const msg of iter) {
+      if (msg.type === "system" && msg.subtype === "init") {
+        activeSessionId = msg.session_id;
+        emit("session", { id: msg.session_id });
+      } else if (msg.type === "stream_event") {
+        handleStreamEvent(msg.event as unknown as Record<string, unknown>, emit, toolBufs);
+      } else if (msg.type === "result") {
+        emitDone(msg as unknown as Record<string, unknown>, emit);
       }
     }
-  });
-
-  child.stderr.on("data", () => {
-    /* swallow noisy hook stderr */
-  });
-
-  child.on("error", (err) => {
-    if (!aborted) emit("error", { message: "spawn failed: " + err.message });
+  } catch (e: unknown) {
+    if (!ac.signal.aborted) {
+      emit("error", { message: e instanceof Error ? e.message : String(e) });
+    }
+  } finally {
     onClose();
-  });
+  }
+}
 
-  child.on("close", (code) => {
-    if (code !== 0 && !aborted) emit("error", { message: "claude exited " + code });
-    onClose();
-  });
-
-  abortSignal.addEventListener("abort", () => {
-    aborted = true;
-    try { child.kill("SIGTERM"); } catch { /* ignore */ }
+function emitDone(msg: Record<string, unknown>, emit: EmitFn) {
+  const usage = msg.subtype === "success" ? (msg.usage as Record<string, number>) : null;
+  const modelUsage = msg.subtype === "success"
+    ? (msg.modelUsage as Record<string, { contextWindow?: number }> | null)
+    : null;
+  const modelKey = modelUsage ? Object.keys(modelUsage)[0] : null;
+  emit("done", {
+    reason: msg.subtype === "success" ? msg.stop_reason : null,
+    duration_ms: msg.duration_ms,
+    duration_api_ms: msg.duration_api_ms,
+    num_turns: msg.num_turns,
+    cost_usd: msg.total_cost_usd,
+    model: modelKey,
+    usage: usage
+      ? {
+          input_tokens: usage.input_tokens,
+          output_tokens: usage.output_tokens,
+          cache_read_input_tokens: usage.cache_read_input_tokens,
+          cache_creation_input_tokens: usage.cache_creation_input_tokens,
+        }
+      : null,
+    context_window: modelKey && modelUsage ? modelUsage[modelKey].contextWindow ?? null : null,
   });
 }
 
-function handleLine(line: string, sessionEmitted: boolean, emit: EmitFn): boolean {
-  let evt: Record<string, unknown>;
-  try {
-    evt = JSON.parse(line);
-  } catch {
-    return false;
-  }
-  const type = evt.type as string | undefined;
-  if (type === "system" && evt.subtype === "init" && !sessionEmitted) {
-    emit("session", { id: evt.session_id });
-    return true;
-  }
-  if (type === "stream_event") {
-    const inner = evt.event as Record<string, unknown> | undefined;
-    if (inner?.type === "content_block_delta") {
-      const delta = inner.delta as Record<string, unknown> | undefined;
-      if (delta?.type === "text_delta" && typeof delta.text === "string") {
-        emit("delta", { text: delta.text });
-      }
+function handleStreamEvent(
+  inner: Record<string, unknown> | undefined,
+  emit: EmitFn,
+  toolBufs: Record<number, ToolBuf>
+) {
+  if (!inner) return;
+  const innerType = inner.type as string | undefined;
+  const idx = inner.index as number | undefined;
+  if (innerType === "content_block_start") {
+    const block = inner.content_block as Record<string, unknown> | undefined;
+    if (block?.type === "tool_use" && typeof idx === "number") {
+      const name = (block.name as string) || "tool";
+      const id = (block.id as string) || null;
+      toolBufs[idx] = { name, id, input: "" };
+      emit("tool_start", { index: idx, name, id });
     }
-    return false;
+    return;
   }
-  if (type === "result") {
-    const usage = evt.usage as Record<string, unknown> | undefined;
-    const modelUsage = evt.modelUsage as Record<string, Record<string, unknown>> | undefined;
-    const modelKey = modelUsage ? Object.keys(modelUsage)[0] : null;
-    emit("done", {
-      reason: evt.stop_reason,
-      duration_ms: evt.duration_ms,
-      duration_api_ms: evt.duration_api_ms,
-      num_turns: evt.num_turns,
-      cost_usd: evt.total_cost_usd,
-      model: modelKey,
-      usage: usage
-        ? {
-            input_tokens: usage.input_tokens,
-            output_tokens: usage.output_tokens,
-            cache_read_input_tokens: usage.cache_read_input_tokens,
-            cache_creation_input_tokens: usage.cache_creation_input_tokens,
-          }
-        : null,
-      context_window:
-        modelKey && modelUsage ? (modelUsage[modelKey].contextWindow as number) : null,
-    });
+  if (innerType === "content_block_delta") {
+    const delta = inner.delta as Record<string, unknown> | undefined;
+    if (delta?.type === "text_delta" && typeof delta.text === "string") {
+      emit("delta", { text: delta.text });
+    } else if (
+      delta?.type === "input_json_delta" &&
+      typeof delta.partial_json === "string" &&
+      typeof idx === "number" &&
+      toolBufs[idx]
+    ) {
+      toolBufs[idx].input += delta.partial_json;
+    }
+    return;
   }
-  return false;
+  if (innerType === "content_block_stop" && typeof idx === "number") {
+    const tb = toolBufs[idx];
+    if (!tb) return;
+    let parsed: Record<string, unknown> | null = null;
+    try { parsed = JSON.parse(tb.input) as Record<string, unknown>; } catch { /* ignore */ }
+    emit("tool_end", { index: idx, name: tb.name, id: tb.id, input: parsed });
+    delete toolBufs[idx];
+  }
 }

@@ -17,6 +17,14 @@ import {
   saveSnapshot,
   turnFromPayload,
 } from "@/lib/chat-helpers";
+import {
+  applyDelta,
+  applyPermissionRequest,
+  applyToolEnd,
+  applyToolStart,
+  type DispatchCtx,
+} from "@/lib/chat-dispatch";
+import { streamSse } from "@/lib/chat-stream-reader";
 
 export function useChatSession(agent: Agent | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -26,6 +34,9 @@ export function useChatSession(agent: Agent | null) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const statsRef = useRef<CumulativeStats>(EMPTY_STATS);
+  const currentAsstIdRef = useRef<string | null>(null);
+  useEffect(() => { statsRef.current = stats; }, [stats]);
 
   useEffect(() => {
     if (!agent) return;
@@ -42,22 +53,21 @@ export function useChatSession(agent: Agent | null) {
     saveSnapshot(agent.id, { messages, sessionId, lastTurn, stats });
   }, [agent?.id, messages, sessionId, lastTurn, stats]);
 
-  const dispatchEvent = useCallback((block: string, asstId: string) => {
+  const dispatchEvent = useCallback((block: string) => {
     const parsed = parseSseBlock(block);
     if (!parsed || !parsed.payload) return;
+    const ctx: DispatchCtx = { setMessages, currentAsstIdRef };
     const { event, payload } = parsed;
-    if (event === "session" && typeof payload.id === "string") {
-      setSessionId(payload.id);
-    } else if (event === "delta" && typeof payload.text === "string") {
-      const text = payload.text;
-      setMessages((arr) => arr.map((x) => (x.id === asstId ? { ...x, text: x.text + text } : x)));
-    } else if (event === "done") {
+    if (event === "session" && typeof payload.id === "string") setSessionId(payload.id);
+    else if (event === "delta" && typeof payload.text === "string") applyDelta(payload.text, ctx);
+    else if (event === "tool_start") applyToolStart({ index: payload.index as number, name: (payload.name as string) || "tool", id: (payload.id as string | null) ?? null }, ctx);
+    else if (event === "tool_end") applyToolEnd({ index: payload.index as number, input: (payload.input as Record<string, unknown> | null) ?? null }, ctx);
+    else if (event === "permission_request") applyPermissionRequest(payload, ctx);
+    else if (event === "done") {
       const t = turnFromPayload(payload);
       setLastTurn(t);
       setStats((s) => accumulate(s, t));
-    } else if (event === "error" && typeof payload.message === "string") {
-      setError(payload.message);
-    }
+    } else if (event === "error" && typeof payload.message === "string") setError(payload.message);
   }, []);
 
   const send = useCallback(
@@ -65,7 +75,9 @@ export function useChatSession(agent: Agent | null) {
       if (!agent || !text.trim() || busy) return;
       setError(null);
       const userMsg: ChatMessage = { id: rand(), role: "user", text: text.trim() };
-      const asstMsg: ChatMessage = { id: rand(), role: "assistant", text: "", streaming: true };
+      const asstId = rand();
+      const asstMsg: ChatMessage = { id: asstId, role: "assistant", text: "", streaming: true };
+      currentAsstIdRef.current = asstId;
       setMessages((m) => [...m, userMsg, asstMsg]);
       setBusy(true);
       const ac = new AbortController();
@@ -77,29 +89,15 @@ export function useChatSession(agent: Agent | null) {
           body: JSON.stringify({ agent_id: agent.id, message: text.trim(), session_id: sessionId }),
           signal: ac.signal,
         });
-        if (!res.ok || !res.body) throw new Error("HTTP " + res.status);
-        const reader = res.body.getReader();
-        const dec = new TextDecoder();
-        let buf = "";
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          let sep;
-          while ((sep = buf.indexOf("\n\n")) !== -1) {
-            dispatchEvent(buf.slice(0, sep), asstMsg.id);
-            buf = buf.slice(sep + 2);
-          }
-        }
+        await streamSse(res, dispatchEvent);
       } catch (e: unknown) {
         if (!(e instanceof Error && e.name === "AbortError")) {
           setError(e instanceof Error ? e.message : String(e));
         }
       } finally {
         setBusy(false);
-        setMessages((arr) =>
-          arr.map((x) => (x.id === asstMsg.id ? { ...x, streaming: false, done: true } : x))
-        );
+        currentAsstIdRef.current = null;
+        setMessages((arr) => arr.map((x) => (x.streaming ? { ...x, streaming: false, done: true } : x)));
         abortRef.current = null;
       }
     },
@@ -107,6 +105,28 @@ export function useChatSession(agent: Agent | null) {
   );
 
   const cancel = useCallback(() => abortRef.current?.abort(), []);
+
+  const decide = useCallback(
+    async (toolUseId: string, decision: "allow" | "deny", always?: boolean) => {
+      setMessages((arr) =>
+        arr.map((x) =>
+          x.role === "permission" && x.permission?.tool_use_id === toolUseId
+            ? { ...x, permission: { ...x.permission, status: decision === "allow" ? "allowed" : "denied", always: !!always } }
+            : x
+        )
+      );
+      try {
+        await fetch("/api/chat/permission", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tool_use_id: toolUseId, decision, always: !!always }),
+        });
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    []
+  );
 
   const clear = useCallback(() => {
     setMessages([]);
@@ -117,5 +137,5 @@ export function useChatSession(agent: Agent | null) {
     if (agent) clearSnapshot(agent.id);
   }, [agent]);
 
-  return { messages, sessionId, lastTurn, stats, busy, error, send, cancel, clear };
+  return { messages, sessionId, lastTurn, stats, busy, error, send, cancel, clear, decide };
 }

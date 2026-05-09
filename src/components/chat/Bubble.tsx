@@ -1,17 +1,25 @@
 "use client";
 
 import { Markdown } from "../Markdown";
-import type { ChatMessage } from "@/lib/chat-types";
+import type { ChatMessage, ToolCall } from "@/lib/chat-types";
+import { PermissionCard } from "./PermissionCard";
+import { toolPreview } from "@/lib/tool-preview";
 
-export function Bubble({ message }: { message: ChatMessage }) {
+type DecideFn = (toolUseId: string, decision: "allow" | "deny", always?: boolean) => void;
+
+export function Bubble({ message, onDecide }: { message: ChatMessage; onDecide?: DecideFn }) {
+  if (message.role === "tool" && message.tool) {
+    return <ToolEntry tool={message.tool} streaming={!!message.streaming} />;
+  }
+  if (message.role === "permission" && message.permission) {
+    return <PermissionCard req={message.permission} onDecide={onDecide} />;
+  }
   const isUser = message.role === "user";
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-          isUser
-            ? "bg-blue-600 text-white"
-            : "bg-white border border-zinc-200 text-zinc-900"
+          isUser ? "bg-blue-600 text-white" : "bg-white border border-zinc-200 text-zinc-900"
         }`}
       >
         {isUser ? (
@@ -20,6 +28,23 @@ export function Bubble({ message }: { message: ChatMessage }) {
           <Dots />
         ) : (
           <Markdown text={message.text} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ToolEntry({ tool, streaming }: { tool: ToolCall; streaming: boolean }) {
+  const preview = toolPreview(tool.input);
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[80%] flex items-center gap-2 text-xs text-zinc-600 border border-zinc-200 bg-zinc-50 rounded-md px-2.5 py-1.5">
+        <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${streaming ? "bg-amber-500 blink" : "bg-emerald-500"}`} />
+        <span className="font-medium text-zinc-800 mono">{tool.name}</span>
+        {preview && (
+          <span className="mono text-zinc-500 truncate" title={preview}>
+            {preview}
+          </span>
         )}
       </div>
     </div>

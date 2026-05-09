@@ -9,6 +9,7 @@
     "telegram": "tsx scripts/telegram-bot.ts"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.137",
     "better-sqlite3": "^12.9.0",
     "next": "16.2.6",
     "node-pty": "^1.1.0",
