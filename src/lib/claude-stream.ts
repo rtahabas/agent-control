@@ -34,6 +34,9 @@ export async function spawnClaude({
         cwd,
         abortController: ac,
         includePartialMessages: true,
+        // AskUserQuestion has no UI surface in this chat — agent must ask in plain text
+        // and the user replies in the next turn. Disabling it avoids double-prompts.
+        disallowedTools: ["AskUserQuestion"],
         ...(sessionId && /^[a-f0-9-]{8,}$/.test(sessionId) ? { resume: sessionId } : {}),
         canUseTool: makeCanUseTool(emit, () => activeSessionId),
       },
