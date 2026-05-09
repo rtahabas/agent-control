@@ -3,16 +3,23 @@
 import { Markdown } from "../Markdown";
 import type { ChatMessage, ToolCall } from "@/lib/chat-types";
 import { PermissionCard } from "./PermissionCard";
+import { QuestionCard } from "./QuestionCard";
 import { toolPreview } from "@/lib/tool-preview";
 
 type DecideFn = (toolUseId: string, decision: "allow" | "deny", always?: boolean) => void;
+type AnswerFn = (toolUseId: string, answers: Record<string, string>) => void;
 
-export function Bubble({ message, onDecide }: { message: ChatMessage; onDecide?: DecideFn }) {
+export function Bubble({
+  message, onDecide, onAnswer,
+}: { message: ChatMessage; onDecide?: DecideFn; onAnswer?: AnswerFn }) {
   if (message.role === "tool" && message.tool) {
     return <ToolEntry tool={message.tool} streaming={!!message.streaming} />;
   }
   if (message.role === "permission" && message.permission) {
     return <PermissionCard req={message.permission} onDecide={onDecide} />;
+  }
+  if (message.role === "question" && message.question) {
+    return <QuestionCard req={message.question} onAnswer={onAnswer} />;
   }
   const isUser = message.role === "user";
   return (

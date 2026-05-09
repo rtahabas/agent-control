@@ -18,6 +18,7 @@ import {
   turnFromPayload,
 } from "@/lib/chat-helpers";
 import {
+  applyAskUserQuestion,
   applyDelta,
   applyPermissionRequest,
   applyToolEnd,
@@ -25,6 +26,7 @@ import {
   type DispatchCtx,
 } from "@/lib/chat-dispatch";
 import { streamSse } from "@/lib/chat-stream-reader";
+import { postAnswer, postDecide } from "@/lib/chat-actions";
 
 export function useChatSession(agent: Agent | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -63,6 +65,7 @@ export function useChatSession(agent: Agent | null) {
     else if (event === "tool_start") applyToolStart({ index: payload.index as number, name: (payload.name as string) || "tool", id: (payload.id as string | null) ?? null }, ctx);
     else if (event === "tool_end") applyToolEnd({ index: payload.index as number, input: (payload.input as Record<string, unknown> | null) ?? null }, ctx);
     else if (event === "permission_request") applyPermissionRequest(payload, ctx);
+    else if (event === "ask_user_question") applyAskUserQuestion(payload, ctx);
     else if (event === "done") {
       const t = turnFromPayload(payload);
       setLastTurn(t);
@@ -107,24 +110,14 @@ export function useChatSession(agent: Agent | null) {
   const cancel = useCallback(() => abortRef.current?.abort(), []);
 
   const decide = useCallback(
-    async (toolUseId: string, decision: "allow" | "deny", always?: boolean) => {
-      setMessages((arr) =>
-        arr.map((x) =>
-          x.role === "permission" && x.permission?.tool_use_id === toolUseId
-            ? { ...x, permission: { ...x.permission, status: decision === "allow" ? "allowed" : "denied", always: !!always } }
-            : x
-        )
-      );
-      try {
-        await fetch("/api/chat/permission", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tool_use_id: toolUseId, decision, always: !!always }),
-        });
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : String(e));
-      }
-    },
+    (toolUseId: string, decision: "allow" | "deny", always?: boolean) =>
+      postDecide(toolUseId, decision, always, setMessages, setError),
+    []
+  );
+
+  const answer = useCallback(
+    (toolUseId: string, answers: Record<string, string>) =>
+      postAnswer(toolUseId, answers, setMessages, setError),
     []
   );
 
@@ -137,5 +130,5 @@ export function useChatSession(agent: Agent | null) {
     if (agent) clearSnapshot(agent.id);
   }, [agent]);
 
-  return { messages, sessionId, lastTurn, stats, busy, error, send, cancel, clear, decide };
+  return { messages, sessionId, lastTurn, stats, busy, error, send, cancel, clear, decide, answer };
 }

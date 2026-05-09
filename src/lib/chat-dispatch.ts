@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChatMessage } from "@/lib/chat-types";
+import type { ChatMessage, QuestionItem } from "@/lib/chat-types";
 import { rand } from "@/lib/chat-fmt";
 
 type SetMessages = (updater: (arr: ChatMessage[]) => ChatMessage[]) => void;
@@ -81,4 +81,23 @@ function insertAfterAsst(arr: ChatMessage[], asstId: string | null, msg: ChatMes
   const cur = arr.find((x) => x.id === asstId);
   if (cur && cur.text === "") return [...arr.filter((x) => x.id !== asstId), msg];
   return [...arr.map((x) => (x.id === asstId ? { ...x, streaming: false } : x)), msg];
+}
+
+export function applyAskUserQuestion(payload: Record<string, unknown>, ctx: DispatchCtx) {
+  const asstId = ctx.currentAsstIdRef.current;
+  ctx.currentAsstIdRef.current = null;
+  const input = (payload.input as Record<string, unknown>) ?? {};
+  const questions = (input.questions as QuestionItem[]) ?? [];
+  const msg: ChatMessage = {
+    id: rand(),
+    role: "question",
+    text: "",
+    streaming: false,
+    question: {
+      tool_use_id: payload.tool_use_id as string,
+      questions,
+      status: "pending",
+    },
+  };
+  ctx.setMessages((arr) => insertAfterAsst(arr, asstId, msg));
 }
