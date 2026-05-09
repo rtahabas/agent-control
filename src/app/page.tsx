@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { AppModals, type ModalState } from "@/components/AppModals";
 import { TopBar, type ConnState } from "@/components/TopBar";
 import { TabRouter } from "@/components/pages/TabRouter";
+import { ChatPanel } from "@/components/ChatPanel";
 import type { Agent, State } from "@/lib/api";
 import { fetchAgents, fetchState } from "@/lib/api";
 import { persistedAge, usePersistedState } from "@/lib/persisted-state";
@@ -78,28 +79,33 @@ export default function Home() {
       <Sidebar tab={tab} onTabChange={setTab} selectedAgent={selectedAgent} agentCount={agents.length} />
       <main className="flex-1 flex flex-col min-w-0">
         <TopBar tab={tab} selectedAgent={selectedAgent} conn={conn} age={age} onRefresh={refresh} />
-        <div className="flex-1 min-h-0 overflow-y-auto bg-zinc-50">
-          <TabRouter
-            tab={tab}
-            state={state}
-            agents={agents}
-            selectedAgent={selectedAgent}
-            selectedId={selectedId}
-            actions={{
-              onOpenFile: (agent, file) => setModal({ kind: "file", agent, file }),
-              onNewMemory: (agent) => setModal({ kind: "new-file", agent }),
-              onSkillClick: (agent, name) => setModal({ kind: "skill", agent, name }),
-              onConsolidateSkill: (agent, name) => setModal({ kind: "skill", agent, name, consolidate: true }),
-              onNewSkill: (agent) => setModal({ kind: "new-skill", agent }),
-              onSubAgentClick: (agent, name) => setModal({ kind: "sub-agent", agent, name }),
-              onNewSubAgent: (agent) => setModal({ kind: "new-sub-agent", agent }),
-              onManageHooks: (agent) => setModal({ kind: "hooks", agent }),
-              onAddAgent: () => setModal({ kind: "create" }),
-              onEditAgent: (agent) => setModal({ kind: "edit", agent }),
-              onDeleteAgent: (agent) => setModal({ kind: "delete", agent }),
-              onSelectAgent: setSelectedId,
-            }}
-          />
+        <div className="flex-1 min-h-0 relative bg-zinc-50">
+          <div className={`absolute inset-0 overflow-y-auto ${tab === "chat" ? "hidden" : ""}`}>
+            <TabRouter
+              tab={tab}
+              state={state}
+              agents={agents}
+              selectedAgent={selectedAgent}
+              selectedId={selectedId}
+              actions={{
+                onOpenFile: (agent, file) => setModal({ kind: "file", agent, file }),
+                onNewMemory: (agent) => setModal({ kind: "new-file", agent }),
+                onSkillClick: (agent, name) => setModal({ kind: "skill", agent, name }),
+                onConsolidateSkill: (agent, name) => setModal({ kind: "skill", agent, name, consolidate: true }),
+                onNewSkill: (agent) => setModal({ kind: "new-skill", agent }),
+                onSubAgentClick: (agent, name) => setModal({ kind: "sub-agent", agent, name }),
+                onNewSubAgent: (agent) => setModal({ kind: "new-sub-agent", agent }),
+                onManageHooks: (agent) => setModal({ kind: "hooks", agent }),
+                onAddAgent: () => setModal({ kind: "create" }),
+                onEditAgent: (agent) => setModal({ kind: "edit", agent }),
+                onDeleteAgent: (agent) => setModal({ kind: "delete", agent }),
+                onSelectAgent: setSelectedId,
+              }}
+            />
+          </div>
+          <div className={`absolute inset-0 ${tab === "chat" ? "" : "hidden"}`}>
+            <ChatPanel agent={selectedAgent} />
+          </div>
         </div>
       </main>
       <AppModals

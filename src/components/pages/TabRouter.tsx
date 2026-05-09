@@ -2,7 +2,6 @@
 
 import type { Agent, State } from "@/lib/api";
 import type { Tab } from "@/lib/tabs";
-import { ChatPanel } from "../ChatPanel";
 import { OverviewPage } from "./OverviewPage";
 import { TokensPage } from "./TokensPage";
 import { ActivityPage } from "./ActivityPage";
@@ -93,6 +92,6 @@ export function TabRouter({ tab, state, agents, selectedAgent, selectedId, actio
         />
       );
     case "chat":
-      return <ChatPanel agent={a} />;
+      return null;
   }
 }
