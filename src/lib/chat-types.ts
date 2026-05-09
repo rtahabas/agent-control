@@ -1,4 +1,25 @@
-export type ChatRole = "user" | "assistant";
+export type ChatRole = "user" | "assistant" | "tool" | "permission";
+
+export interface ToolCall {
+  index: number;
+  name: string;
+  id: string | null;
+  input?: Record<string, unknown> | null;
+  done?: boolean;
+}
+
+export type PermissionStatus = "pending" | "allowed" | "denied";
+
+export interface PermissionRequest {
+  tool_use_id: string;
+  tool_name: string;
+  input: Record<string, unknown>;
+  title?: string | null;
+  display_name?: string | null;
+  description?: string | null;
+  status: PermissionStatus;
+  always?: boolean;
+}
 
 export interface ChatMessage {
   id: string;
@@ -6,6 +27,8 @@ export interface ChatMessage {
   text: string;
   streaming?: boolean;
   done?: boolean;
+  tool?: ToolCall;
+  permission?: PermissionRequest;
 }
 
 export interface TurnUsage {

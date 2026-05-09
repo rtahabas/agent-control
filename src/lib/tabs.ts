@@ -20,6 +20,8 @@ export interface NavSection {
   items: NavItem[];
 }
 
+export const PINNED_TOP: NavItem = { tab: "chat", label: "Chat" };
+
 export const NAV: NavSection[] = [
   {
     heading: "Monitoring",
@@ -41,20 +43,21 @@ export const NAV: NavSection[] = [
   },
   {
     heading: "Workspace",
-    items: [
-      { tab: "agents", label: "Agents" },
-      { tab: "chat", label: "Chat" },
-    ],
+    items: [{ tab: "agents", label: "Agents" }],
   },
 ];
 
-const VALID = new Set<Tab>(NAV.flatMap((s) => s.items.map((i) => i.tab)));
+const VALID = new Set<Tab>([
+  PINNED_TOP.tab,
+  ...NAV.flatMap((s) => s.items.map((i) => i.tab)),
+]);
 
 export function isTab(v: string): v is Tab {
   return VALID.has(v as Tab);
 }
 
 export function tabLabel(tab: Tab): string {
+  if (tab === PINNED_TOP.tab) return PINNED_TOP.label;
   for (const s of NAV) {
     for (const i of s.items) if (i.tab === tab) return i.label;
   }

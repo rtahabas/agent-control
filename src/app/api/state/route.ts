@@ -15,9 +15,11 @@ const EMPTY_STATE = {
   projects: [],
   skills: { window_days: 30, installed_count: 0, total_invocations: 0, active: [], inactive: [], dead: [], external: [] },
   sub_agents: [],
-  memory: { total_files: 0, total_lines: 0, modified_last_7d: 0, modified_last_30d: 0, categories: { feedback: 0, project: 0, pending: 0, other: 0 }, indexes: [] },
+  memory: { total_files: 0, total_lines: 0, modified_last_7d: 0, modified_last_30d: 0, categories: { feedback: 0, project: 0, pending: 0, other: 0 }, indexes: [], hot_lines: 0, hot_cap: 100 },
   pending: [],
   hooks: { SessionStart: 0, PreToolUse: 0, PostToolUse: 0, Stop: 0 },
+  health: { stale_daily_logs: [] },
+  skill_timeline: {},
 };
 
 export async function GET(req: Request) {

@@ -41,6 +41,31 @@ export function turnFromPayload(payload: Record<string, unknown>): TurnInfo {
   };
 }
 
+// claude CLI's `result` event reports cumulative session totals (cost + usage),
+// not per-turn. Subtract prior session stats to get the actual last-turn delta.
+export function deltaTurn(cumulative: TurnInfo, prev: CumulativeStats): TurnInfo {
+  const sub = (cur: number | undefined, prior: number) =>
+    Math.max(0, (cur ?? 0) - prior);
+  return {
+    ...cumulative,
+    cost_usd: sub(cumulative.cost_usd, prev.total_cost_usd),
+    usage: cumulative.usage
+      ? {
+          input_tokens: sub(cumulative.usage.input_tokens, prev.total_input),
+          output_tokens: sub(cumulative.usage.output_tokens, prev.total_output),
+          cache_read_input_tokens: sub(
+            cumulative.usage.cache_read_input_tokens,
+            prev.total_cache_read
+          ),
+          cache_creation_input_tokens: sub(
+            cumulative.usage.cache_creation_input_tokens,
+            prev.total_cache_creation
+          ),
+        }
+      : null,
+  };
+}
+
 export function accumulate(s: CumulativeStats, t: TurnInfo): CumulativeStats {
   return {
     turns: s.turns + 1,
