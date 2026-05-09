@@ -9,7 +9,16 @@ interface Pending {
 }
 
 const pending = new Map<string, Pending>();
+const pendingQuestions = new Map<string, (answers: Record<string, string>) => void>();
 const sessionAllowlists = new Map<string, Set<string>>();
+
+export function answerQuestion(toolUseId: string, answers: Record<string, string>): boolean {
+  const resolve = pendingQuestions.get(toolUseId);
+  if (!resolve) return false;
+  pendingQuestions.delete(toolUseId);
+  resolve(answers);
+  return true;
+}
 
 export function decidePermission(
   toolUseId: string,
@@ -37,6 +46,9 @@ export function decidePermission(
 
 export function makeCanUseTool(emit: EmitFn, getSessionId: () => string | null): CanUseTool {
   return async (toolName, input, opts) => {
+    if (toolName === "AskUserQuestion") {
+      return await handleAskUserQuestion(emit, input, opts);
+    }
     const sid = getSessionId();
     if (sid) {
       const set = sessionAllowlists.get(sid);
@@ -63,4 +75,23 @@ export function makeCanUseTool(emit: EmitFn, getSessionId: () => string | null):
       });
     });
   };
+}
+
+async function handleAskUserQuestion(
+  emit: EmitFn,
+  input: Record<string, unknown>,
+  opts: { toolUseID: string; signal: AbortSignal }
+): Promise<PermissionResult> {
+  return await new Promise<PermissionResult>((resolve) => {
+    const id = opts.toolUseID;
+    pendingQuestions.set(id, (answers) => {
+      const lines = Object.entries(answers).map(([q, a]) => `${q}: ${a}`).join("\n");
+      resolve({ behavior: "deny", message: `User answered:\n${lines}`, interrupt: false });
+    });
+    emit("ask_user_question", { tool_use_id: id, input });
+    opts.signal.addEventListener("abort", () => {
+      pendingQuestions.delete(id);
+      resolve({ behavior: "deny", message: "aborted", interrupt: true });
+    });
+  });
 }

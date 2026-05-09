@@ -1,4 +1,25 @@
-export type ChatRole = "user" | "assistant" | "tool" | "permission";
+export type ChatRole = "user" | "assistant" | "tool" | "permission" | "question";
+
+export interface QuestionOption {
+  label: string;
+  description?: string;
+}
+
+export interface QuestionItem {
+  question: string;
+  header?: string;
+  multiSelect?: boolean;
+  options: QuestionOption[];
+}
+
+export type QuestionStatus = "pending" | "answered";
+
+export interface QuestionRequest {
+  tool_use_id: string;
+  questions: QuestionItem[];
+  answers?: Record<string, string>;
+  status: QuestionStatus;
+}
 
 export interface ToolCall {
   index: number;
@@ -29,6 +50,7 @@ export interface ChatMessage {
   done?: boolean;
   tool?: ToolCall;
   permission?: PermissionRequest;
+  question?: QuestionRequest;
 }
 
 export interface TurnUsage {
