@@ -11,6 +11,7 @@ export interface AgentHarnessSupport {
 }
 
 export interface AgentHarnessAttemptParams {
+  readonly agentId: string;
   readonly message: string;
   readonly sessionId: string | null | undefined;
   readonly cwd: string;
