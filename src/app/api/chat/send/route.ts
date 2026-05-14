@@ -3,8 +3,10 @@ import fs from "fs";
 import { getAgentPath } from "@/lib/db";
 import { claudeSdkAdapter } from "@/lib/claude-sdk-adapter";
 import { registerRuntimeContext } from "@/lib/runtime-context-subscriber";
+import { registerSkillSubscriptions } from "@/lib/skill-subscriber";
 
 registerRuntimeContext();
+void registerSkillSubscriptions();
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
