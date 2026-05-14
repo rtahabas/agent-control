@@ -37,10 +37,10 @@ export async function GET(
     const raw = await fs.readFile(path.join(dir, e.name), "utf8").catch(() => "");
     const meta = parseFrontmatter(raw);
     out.push({
-      name: meta.name || e.name.replace(/\.md$/, ""),
-      description: meta.description || "",
-      model: meta.model || "",
-      isolation: meta.isolation || "",
+      name: typeof meta.name === "string" ? meta.name : e.name.replace(/\.md$/, ""),
+      description: typeof meta.description === "string" ? meta.description : "",
+      model: typeof meta.model === "string" ? meta.model : "",
+      isolation: typeof meta.isolation === "string" ? meta.isolation : "",
     });
   }
   out.sort((a, b) => a.name.localeCompare(b.name));
