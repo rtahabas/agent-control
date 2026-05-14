@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import { getAgentPath } from "@/lib/db";
-import { spawnClaude } from "@/lib/claude-stream";
+import { claudeSdkAdapter } from "@/lib/claude-sdk-adapter";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       const close = () => {
         try { controller.close(); } catch { /* ignore */ }
       };
-      spawnClaude({
+      void claudeSdkAdapter.runAttempt({
         message,
         sessionId: body.session_id,
         cwd: agentPath,
