@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchAgentSkill, saveAgentSkill, deleteAgentSkill } from "@/lib/agent-skills-api";
+import { parseFrontmatter, buildSkillEntry, type SkillEntry } from "@/lib/skill-parse";
 import { Markdown } from "./Markdown";
 import { ModalShell } from "./editor/Field";
 
@@ -15,22 +16,18 @@ interface Props {
 type Mode = "read" | "edit";
 
 interface Split {
-  meta: Record<string, string>;
+  meta: Record<string, unknown>;
+  entry: SkillEntry;
   body: string;
 }
 
-function splitFrontmatter(text: string): Split {
+const STRUCTURED_KEYS = new Set(["name", "description", "activation", "lifecycle", "configSchema"]);
+
+function splitFrontmatter(text: string, fallbackName: string): Split {
   const m = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
-  if (!m) return { meta: {}, body: text };
-  const meta: Record<string, string> = {};
-  for (const line of m[1].split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-    const k = line.slice(0, idx).trim();
-    const v = line.slice(idx + 1).trim().replace(/^["']|["']$/g, "");
-    if (k) meta[k] = v;
-  }
-  return { meta, body: m[2] };
+  if (!m) return { meta: {}, entry: { name: fallbackName, description: "" }, body: text };
+  const meta = parseFrontmatter(text);
+  return { meta, entry: buildSkillEntry(meta, fallbackName), body: m[2] };
 }
 
 export function SkillViewer({ agentId, skillName, consolidate, onClose }: Props) {
@@ -77,7 +74,7 @@ export function SkillViewer({ agentId, skillName, consolidate, onClose }: Props)
     catch (e) { setError(e instanceof Error ? e.message : String(e)); setSaving(false); }
   };
 
-  const split = content !== null ? splitFrontmatter(content) : null;
+  const split = content !== null ? splitFrontmatter(content, skillName) : null;
 
   return (
     <ModalShell onClose={closeIfClean} busy={busy} wide>
@@ -107,14 +104,55 @@ export function SkillViewer({ agentId, skillName, consolidate, onClose }: Props)
           {loading && <div className="text-sm text-zinc-500">Loading…</div>}
           {!loading && split && mode === "read" && (
             <>
-              {Object.keys(split.meta).length > 0 && (
-                <div className="bg-white border border-zinc-200 rounded-lg p-4 mb-4 space-y-1.5">
-                  {Object.entries(split.meta).map(([k, v]) => (
-                    <div key={k} className="text-xs">
-                      <span className="text-zinc-500 mr-2 font-mono">{k}</span>
-                      <span className="text-zinc-900">{v}</span>
+              {(Object.keys(split.meta).length > 0 || split.entry.activation || split.entry.lifecycle || split.entry.configSchema) && (
+                <div className="bg-white border border-zinc-200 rounded-lg p-4 mb-4 space-y-2">
+                  {Object.entries(split.meta)
+                    .filter(([k, v]) => !STRUCTURED_KEYS.has(k) && typeof v === "string")
+                    .map(([k, v]) => (
+                      <div key={k} className="text-xs">
+                        <span className="text-zinc-500 mr-2 font-mono">{k}</span>
+                        <span className="text-zinc-900">{String(v)}</span>
+                      </div>
+                    ))}
+                  {(typeof split.meta.name === "string" || split.entry.name !== skillName) && (
+                    <div className="text-xs">
+                      <span className="text-zinc-500 mr-2 font-mono">name</span>
+                      <span className="text-zinc-900">{split.entry.name}</span>
                     </div>
-                  ))}
+                  )}
+                  {split.entry.description && (
+                    <div className="text-xs">
+                      <span className="text-zinc-500 mr-2 font-mono">description</span>
+                      <span className="text-zinc-900">{split.entry.description}</span>
+                    </div>
+                  )}
+                  {split.entry.activation?.onStartup && (
+                    <div className="text-xs pt-1">
+                      <span className="inline-block px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-[11px]">
+                        Auto-load on startup
+                      </span>
+                    </div>
+                  )}
+                  {split.entry.lifecycle?.hooks && split.entry.lifecycle.hooks.length > 0 && (
+                    <div className="text-xs pt-1">
+                      <span className="text-zinc-500 mr-2 font-mono">hooks</span>
+                      <span className="inline-flex flex-wrap gap-1">
+                        {split.entry.lifecycle.hooks.map((h) => (
+                          <span key={h} className="inline-block px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[11px] font-mono">
+                            {h}
+                          </span>
+                        ))}
+                      </span>
+                    </div>
+                  )}
+                  {split.entry.configSchema && (
+                    <details className="text-xs pt-1">
+                      <summary className="cursor-pointer text-zinc-500 font-mono">configSchema</summary>
+                      <pre className="mt-1 p-2 bg-zinc-50 rounded text-[11px] overflow-x-auto">
+                        {JSON.stringify(split.entry.configSchema, null, 2)}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               )}
               {split.body.trim() && <Markdown text={split.body} />}
