@@ -1,23 +1,70 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { parse as parseYAML } from "yaml";
+
+export interface SkillActivation {
+  onStartup?: boolean;
+}
+
+export interface SkillLifecycle {
+  hooks?: string[];
+}
 
 export interface SkillEntry {
   name: string;
   description: string;
+  activation?: SkillActivation;
+  configSchema?: Record<string, unknown>;
+  lifecycle?: SkillLifecycle;
 }
 
-export function parseFrontmatter(raw: string): Record<string, string> {
-  const m = raw.match(/^---\n([\s\S]*?)\n---/);
-  if (!m) return {};
-  const out: Record<string, string> = {};
-  for (const line of m[1].split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-    const k = line.slice(0, idx).trim();
-    const v = line.slice(idx + 1).trim().replace(/^["']|["']$/g, "");
-    if (k) out[k] = v;
+export function parseFrontmatter(raw: string): Record<string, unknown> {
+  const match = raw.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return {};
+  try {
+    const parsed: unknown = parseYAML(match[1]);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    /* malformed frontmatter — treat as empty */
   }
-  return out;
+  return {};
+}
+
+function readActivation(value: unknown): SkillActivation | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const v = value as Record<string, unknown>;
+  if (typeof v.onStartup !== "boolean") return undefined;
+  return { onStartup: v.onStartup };
+}
+
+function readLifecycle(value: unknown): SkillLifecycle | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const v = value as Record<string, unknown>;
+  if (!Array.isArray(v.hooks)) return undefined;
+  const hooks = v.hooks.filter((h): h is string => typeof h === "string");
+  if (hooks.length === 0) return undefined;
+  return { hooks };
+}
+
+function readConfigSchema(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
+}
+
+export function buildSkillEntry(fm: Record<string, unknown>, fallbackName: string): SkillEntry {
+  const entry: SkillEntry = {
+    name: typeof fm.name === "string" ? fm.name : fallbackName,
+    description: typeof fm.description === "string" ? fm.description : "",
+  };
+  const activation = readActivation(fm.activation);
+  if (activation) entry.activation = activation;
+  const lifecycle = readLifecycle(fm.lifecycle);
+  if (lifecycle) entry.lifecycle = lifecycle;
+  const configSchema = readConfigSchema(fm.configSchema);
+  if (configSchema) entry.configSchema = configSchema;
+  return entry;
 }
 
 export async function readSkillsDir(dir: string): Promise<SkillEntry[]> {
@@ -37,11 +84,7 @@ export async function readSkillsDir(dir: string): Promise<SkillEntry[]> {
     } catch {
       continue;
     }
-    const fm = parseFrontmatter(raw);
-    out.push({
-      name: fm.name || e.name,
-      description: fm.description || "",
-    });
+    out.push(buildSkillEntry(parseFrontmatter(raw), e.name));
   }
   out.sort((a, b) => a.name.localeCompare(b.name));
   return out;
