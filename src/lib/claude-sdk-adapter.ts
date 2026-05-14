@@ -1,4 +1,5 @@
 import { spawnClaude } from "@/lib/claude-stream";
+import { agentHooks } from "@/lib/hooks";
 import type {
   AgentHarness,
   AgentHarnessAttemptParams,
@@ -28,6 +29,15 @@ function isErrorPayload(d: unknown): d is { message: string } {
   );
 }
 
+function determineStatus(
+  aborted: boolean,
+  error: string | undefined,
+): AgentHarnessAttemptResult["status"] {
+  if (aborted) return "aborted";
+  if (error) return "error";
+  return "ok";
+}
+
 export const claudeSdkAdapter: AgentHarness = {
   id: "claude-sdk",
   label: "Claude Agent SDK",
@@ -40,6 +50,18 @@ export const claudeSdkAdapter: AgentHarness = {
   },
 
   async runAttempt(params: AgentHarnessAttemptParams): Promise<AgentHarnessAttemptResult> {
+    const replyCtx = await agentHooks.emit("before_agent_reply", {
+      agentId: params.agentId,
+      cwd: params.cwd,
+      sessionId: params.sessionId ?? null,
+      contextSections: [],
+    });
+
+    const augmentedMessage =
+      replyCtx.contextSections.length > 0
+        ? replyCtx.contextSections.join("\n\n") + "\n\n" + params.message
+        : params.message;
+
     let capturedSessionId: string | null = params.sessionId ?? null;
     let capturedError: string | undefined;
 
@@ -53,7 +75,7 @@ export const claudeSdkAdapter: AgentHarness = {
     };
 
     await spawnClaude({
-      message: params.message,
+      message: augmentedMessage,
       sessionId: params.sessionId,
       cwd: params.cwd,
       emit: emitWrap,
@@ -61,12 +83,18 @@ export const claudeSdkAdapter: AgentHarness = {
       abortSignal: params.abortSignal,
     });
 
-    if (params.abortSignal.aborted) {
-      return { sessionId: capturedSessionId, status: "aborted" };
+    const status = determineStatus(params.abortSignal.aborted, capturedError);
+
+    await agentHooks.emit("agent_end", {
+      agentId: params.agentId,
+      sessionId: capturedSessionId,
+      status,
+      ...(capturedError ? { error: capturedError } : {}),
+    });
+
+    if (status === "error") {
+      return { sessionId: capturedSessionId, status, error: capturedError };
     }
-    if (capturedError) {
-      return { sessionId: capturedSessionId, status: "error", error: capturedError };
-    }
-    return { sessionId: capturedSessionId, status: "ok" };
+    return { sessionId: capturedSessionId, status };
   },
 };

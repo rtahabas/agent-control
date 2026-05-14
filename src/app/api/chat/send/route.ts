@@ -53,6 +53,7 @@ export async function POST(req: Request) {
         try { controller.close(); } catch { /* ignore */ }
       };
       void claudeSdkAdapter.runAttempt({
+        agentId,
         message,
         sessionId: body.session_id,
         cwd: agentPath,

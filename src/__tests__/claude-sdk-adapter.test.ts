@@ -12,6 +12,7 @@ const mockSpawnClaude = vi.mocked(spawnClaude);
 
 function buildParams(overrides?: Partial<AgentHarnessAttemptParams>): AgentHarnessAttemptParams {
   return {
+    agentId: "test-agent",
     message: "hello",
     sessionId: null,
     cwd: "/tmp/agent",
