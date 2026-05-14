@@ -1,4 +1,5 @@
 import type { CanUseTool, PermissionResult } from "@anthropic-ai/claude-agent-sdk";
+import { agentHooks } from "@/lib/hooks";
 
 export type EmitFn = (event: string, data: unknown) => void;
 
@@ -46,34 +47,51 @@ export function decidePermission(
 
 export function makeCanUseTool(emit: EmitFn, getSessionId: () => string | null): CanUseTool {
   return async (toolName, input, opts) => {
-    if (toolName === "AskUserQuestion") {
-      return await handleAskUserQuestion(emit, input, opts);
-    }
     const sid = getSessionId();
-    if (sid) {
-      const set = sessionAllowlists.get(sid);
-      if (set?.has(toolName)) return { behavior: "allow", updatedInput: input };
-    }
-    return await new Promise<PermissionResult>((resolve) => {
-      const id = opts.toolUseID;
-      pending.set(id, {
-        resolve: (r) => resolve(r.behavior === "allow" ? { ...r, updatedInput: input } : r),
-        toolName,
-        sessionId: sid,
-      });
-      emit("permission_request", {
-        tool_use_id: id,
-        tool_name: toolName,
-        input,
-        title: opts.title ?? null,
-        display_name: opts.displayName ?? null,
-        description: opts.description ?? null,
-      });
-      opts.signal.addEventListener("abort", () => {
-        pending.delete(id);
-        resolve({ behavior: "deny", message: "aborted", interrupt: true });
-      });
+
+    const beforeCtx = await agentHooks.emit("before_tool_call", {
+      toolName,
+      input: { ...input },
+      sessionId: sid,
     });
+    const finalInput = beforeCtx.input;
+
+    let decision: PermissionResult;
+    if (toolName === "AskUserQuestion") {
+      decision = await handleAskUserQuestion(emit, finalInput, opts);
+    } else if (sid && sessionAllowlists.get(sid)?.has(toolName)) {
+      decision = { behavior: "allow", updatedInput: finalInput };
+    } else {
+      decision = await new Promise<PermissionResult>((resolve) => {
+        const id = opts.toolUseID;
+        pending.set(id, {
+          resolve: (r) => resolve(r.behavior === "allow" ? { ...r, updatedInput: finalInput } : r),
+          toolName,
+          sessionId: sid,
+        });
+        emit("permission_request", {
+          tool_use_id: id,
+          tool_name: toolName,
+          input: finalInput,
+          title: opts.title ?? null,
+          display_name: opts.displayName ?? null,
+          description: opts.description ?? null,
+        });
+        opts.signal.addEventListener("abort", () => {
+          pending.delete(id);
+          resolve({ behavior: "deny", message: "aborted", interrupt: true });
+        });
+      });
+    }
+
+    await agentHooks.emit("after_tool_call", {
+      toolName,
+      input: finalInput,
+      result: decision,
+      sessionId: sid,
+    });
+
+    return decision;
   };
 }
 
