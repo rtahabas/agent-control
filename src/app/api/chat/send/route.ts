@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import { getAgentPath } from "@/lib/db";
 import { claudeSdkAdapter } from "@/lib/claude-sdk-adapter";
+import { registerRuntimeContext } from "@/lib/runtime-context-subscriber";
+
+registerRuntimeContext();
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
