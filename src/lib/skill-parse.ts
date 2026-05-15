@@ -14,6 +14,7 @@ export interface SkillEntry {
   activation?: SkillActivation;
   configSchema?: Record<string, unknown>;
   lifecycle?: SkillLifecycle;
+  enabled?: boolean;
 }
 
 export function parseFrontmatter(raw: string): Record<string, unknown> {

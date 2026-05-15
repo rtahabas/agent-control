@@ -7,6 +7,7 @@ import type {
   Skills as SkillsState,
 } from "@/lib/api";
 import { Sparkline } from "./Sparkline";
+import { SkillToggle } from "./SkillToggle";
 
 const BAR: Record<SkillCategory, string> = {
   active: "bg-emerald-500",
@@ -37,6 +38,8 @@ interface Props {
   onSkillClick?: (name: string) => void;
   onNewClick?: () => void;
   onConsolidateClick?: (name: string) => void;
+  enabledMap?: Map<string, boolean>;
+  onToggleEnabled?: (name: string) => void;
 }
 
 export function Skills({
@@ -45,7 +48,10 @@ export function Skills({
   onSkillClick,
   onNewClick,
   onConsolidateClick,
+  enabledMap,
+  onToggleEnabled,
 }: Props) {
+  const showEnabledCol = !!enabledMap && !!onToggleEnabled;
   const counts = {
     active: skills.active.length,
     inactive: skills.inactive.length,
@@ -98,6 +104,7 @@ export function Skills({
               <th className="text-right font-medium px-4 py-2.5">Inv</th>
               <th className="text-left font-medium px-4 py-2.5">30d</th>
               <th className="text-left font-medium px-4 py-2.5">Last invoked</th>
+              {showEnabledCol && <th className="text-center font-medium px-4 py-2.5">Enabled</th>}
               <th className="text-right font-medium px-4 py-2.5"></th>
             </tr>
           </thead>
@@ -123,6 +130,15 @@ export function Skills({
                     )}
                   </td>
                   <td className="px-4 py-2.5 mono text-xs text-zinc-500">{r.last_invoked || "—"}</td>
+                  {showEnabledCol && (
+                    <td className="px-4 py-2.5 text-center">
+                      <SkillToggle
+                        skillName={r.skill}
+                        enabled={installed ? enabledMap!.get(r.skill) : undefined}
+                        onToggle={onToggleEnabled!}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-right">
                     {r._c === "dead" && onConsolidateClick && (
                       <button
