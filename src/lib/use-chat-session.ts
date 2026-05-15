@@ -70,6 +70,8 @@ export function useChatSession(agent: Agent | null) {
       const t = turnFromPayload(payload);
       setLastTurn(t);
       setStats((s) => accumulate(s, t));
+      setBusy(false);
+      setMessages((arr) => arr.map((x) => (x.streaming ? { ...x, streaming: false, done: true } : x)));
     } else if (event === "error" && typeof payload.message === "string") setError(payload.message);
   }, []);
 

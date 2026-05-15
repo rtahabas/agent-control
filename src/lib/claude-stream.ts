@@ -27,18 +27,18 @@ export async function spawnClaude({
   let activeSessionId: string | null = sessionId ?? null;
   const toolBufs: Record<number, ToolBuf> = {};
 
-  try {
-    const iter = query({
-      prompt: message,
-      options: {
-        cwd,
-        abortController: ac,
-        includePartialMessages: true,
-        ...(sessionId && /^[a-f0-9-]{8,}$/.test(sessionId) ? { resume: sessionId } : {}),
-        canUseTool: makeCanUseTool(emit, () => activeSessionId),
-      },
-    });
+  const iter = query({
+    prompt: message,
+    options: {
+      cwd,
+      abortController: ac,
+      includePartialMessages: true,
+      ...(sessionId && /^[a-f0-9-]{8,}$/.test(sessionId) ? { resume: sessionId } : {}),
+      canUseTool: makeCanUseTool(emit, () => activeSessionId),
+    },
+  });
 
+  try {
     for await (const msg of iter) {
       if (msg.type === "system" && msg.subtype === "init") {
         activeSessionId = msg.session_id;
@@ -47,6 +47,7 @@ export async function spawnClaude({
         handleStreamEvent(msg.event as unknown as Record<string, unknown>, emit, toolBufs);
       } else if (msg.type === "result") {
         emitDone(msg as unknown as Record<string, unknown>, emit);
+        break;
       }
     }
   } catch (e: unknown) {
@@ -54,6 +55,7 @@ export async function spawnClaude({
       emit("error", { message: e instanceof Error ? e.message : String(e) });
     }
   } finally {
+    await iter?.return?.();
     onClose();
   }
 }
