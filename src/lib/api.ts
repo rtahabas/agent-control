@@ -78,8 +78,15 @@ export async function deleteAgent(id: string): Promise<void> {
   }
 }
 
-export async function fetchState(agentId?: string | null): Promise<State> {
-  const url = agentId ? `/api/state?agentId=${encodeURIComponent(agentId)}` : "/api/state";
+export async function fetchState(
+  agentId?: string | null,
+  opts?: { fresh?: boolean },
+): Promise<State> {
+  const params = new URLSearchParams();
+  if (agentId) params.set("agentId", agentId);
+  if (opts?.fresh) params.set("fresh", "1");
+  const qs = params.toString();
+  const url = qs ? `/api/state?${qs}` : "/api/state";
   const r = await fetch(url, { cache: "no-store" });
   if (!r.ok) throw new Error("state fetch failed: " + r.status);
   return r.json();

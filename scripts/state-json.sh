@@ -106,16 +106,34 @@ if [ -d "$WORKSPACE" ]; then
     < <(find "$WORKSPACE" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
 fi
 
+# Fan out project_obj across all projects in parallel. Each call shells out
+# to gh twice (pr list + issue list) which dominates wall time, so going from
+# sequential to parallel cuts /api/state from ~11s to ~1-2s on the typical
+# workspace.
+PROJECT_TMP=$(mktemp -d 2>/dev/null || mktemp -d -t state-projects)
+PROJECT_COUNT=0
+for p in "${PROJECTS[@]:-}"; do
+  [ -z "$p" ] && continue
+  (project_obj "$p" > "$PROJECT_TMP/$PROJECT_COUNT.json") &
+  PROJECT_COUNT=$((PROJECT_COUNT + 1))
+done
+wait
+
 PROJECTS_JSON=$(
   first=1; printf '['
-  for p in "${PROJECTS[@]:-}"; do
-    [ -z "$p" ] && continue
-    [ $first -eq 0 ] && printf ','
-    first=0
-    project_obj "$p"
+  i=0
+  while [ $i -lt $PROJECT_COUNT ]; do
+    out_file="$PROJECT_TMP/$i.json"
+    if [ -s "$out_file" ]; then
+      [ $first -eq 0 ] && printf ','
+      first=0
+      cat "$out_file"
+    fi
+    i=$((i + 1))
   done
   printf ']'
 )
+rm -rf "$PROJECT_TMP"
 
 SKILLS_JSON=$("$SKILL_STATS" --json --root "$AGENT_ROOT")
 
