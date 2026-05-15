@@ -41,10 +41,10 @@ export default function Home() {
     } catch (e) { console.error("agents:", e); }
   }, [setSelectedId]);
 
-  const loadState = useCallback(async (agentId: string | null) => {
+  const loadState = useCallback(async (agentId: string | null, opts?: { fresh?: boolean }) => {
     setConn("loading");
     try {
-      const s = await fetchState(agentId);
+      const s = await fetchState(agentId, opts);
       setState(s); setLastFetchTs(Date.now()); setConn("ok");
     } catch (e) { console.error("state:", e); setConn("error"); }
   }, []);
@@ -72,7 +72,7 @@ export default function Home() {
   }, [lastFetchTs]);
 
   const selectedAgent = agents.find((a) => a.id === selectedId) ?? null;
-  const refresh = () => { loadAgents(); loadState(selectedId); };
+  const refresh = () => { loadAgents(); loadState(selectedId, { fresh: true }); };
 
   return (
     <div className="flex h-screen overflow-hidden">

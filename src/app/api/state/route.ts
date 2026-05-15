@@ -3,6 +3,11 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "node:path";
 import { getAgentPath } from "@/lib/db";
+import {
+  readCachedState,
+  withSingleFlight,
+  writeCachedState,
+} from "@/lib/state-cache";
 
 const execFileP = promisify(execFile);
 
@@ -22,9 +27,29 @@ const EMPTY_STATE = {
   skill_timeline: {},
 };
 
+async function fetchFreshState(agentPath: string): Promise<string> {
+  const { stdout } = await execFileP(STATE_SCRIPT, ["--root", agentPath], {
+    maxBuffer: 8 * 1024 * 1024,
+    timeout: 30000,
+  });
+  return stdout;
+}
+
+function jsonResponse(body: string, age: "hit" | "miss"): NextResponse {
+  return new NextResponse(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-State-Cache": age,
+    },
+  });
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const agentId = searchParams.get("agentId");
+  const bypass = searchParams.get("fresh") === "1";
 
   if (!agentId) {
     return NextResponse.json(EMPTY_STATE);
@@ -35,18 +60,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "agent not found: " + agentId }, { status: 404 });
   }
 
+  if (!bypass) {
+    const cached = readCachedState(agentId);
+    if (cached !== null) return jsonResponse(cached, "hit");
+  }
+
   try {
-    const { stdout } = await execFileP(STATE_SCRIPT, ["--root", agentPath], {
-      maxBuffer: 8 * 1024 * 1024,
-      timeout: 30000,
-    });
-    return new NextResponse(stdout, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    });
+    const body = await withSingleFlight(agentId, () => fetchFreshState(agentPath));
+    writeCachedState(agentId, body);
+    return jsonResponse(body, "miss");
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: "state script failed: " + msg }, { status: 500 });
