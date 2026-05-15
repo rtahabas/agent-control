@@ -119,4 +119,29 @@ describe("registerSkillSubscriptions", () => {
     const count = await registerSkillSubscriptions(loader([fakeSkill]));
     expect(count).toBe(0);
   });
+
+  it("skips skills with enabled === false", async () => {
+    const count = await registerSkillSubscriptions(
+      loader([
+        {
+          name: "off",
+          description: "x",
+          enabled: false,
+          lifecycle: { hooks: ["before_agent_reply", "agent_end"] },
+        },
+        {
+          name: "on",
+          description: "x",
+          enabled: true,
+          lifecycle: { hooks: ["before_tool_call"] },
+        },
+        {
+          name: "default",
+          description: "x",
+          lifecycle: { hooks: ["after_tool_call"] },
+        },
+      ]),
+    );
+    expect(count).toBe(2);
+  });
 });

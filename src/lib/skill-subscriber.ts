@@ -33,6 +33,7 @@ export async function registerSkillSubscriptions(
   const skills = await loader();
   let count = 0;
   for (const skill of skills) {
+    if (skill.enabled === false) continue;
     const hooks = skill.lifecycle?.hooks;
     if (!hooks) continue;
     for (const name of hooks) {

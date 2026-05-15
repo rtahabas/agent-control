@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS agents (
   created_at TEXT NOT NULL,
   notes TEXT
 );
+CREATE TABLE IF NOT EXISTS skill_states (
+  name TEXT PRIMARY KEY,
+  enabled INTEGER NOT NULL DEFAULT 1
+);
 `;
 
 function dbPath(): string {
