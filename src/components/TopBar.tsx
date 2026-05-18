@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Agent } from "@/lib/api";
 import type { Tab } from "@/lib/tabs";
 import { tabLabel } from "@/lib/tabs";
+import { persistedAge } from "@/lib/persisted-state";
 
 export type ConnState = "loading" | "ok" | "error";
 
@@ -28,11 +30,11 @@ interface Props {
   tab: Tab;
   selectedAgent: Agent | null;
   conn: ConnState;
-  age: string;
+  lastFetchTs: number | null;
   onRefresh: () => void;
 }
 
-export function TopBar({ tab, selectedAgent, conn, age, onRefresh }: Props) {
+export function TopBar({ tab, selectedAgent, conn, lastFetchTs, onRefresh }: Props) {
   return (
     <header className="border-b border-zinc-200 bg-white px-6 py-3 flex items-center gap-3 shrink-0">
       <div>
@@ -50,7 +52,7 @@ export function TopBar({ tab, selectedAgent, conn, age, onRefresh }: Props) {
           agent <span className="mono text-zinc-900">{selectedAgent.name}</span>
         </div>
       )}
-      <span className="text-xs text-zinc-400 mono">{age}</span>
+      <AgeBadge ts={lastFetchTs} />
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${CONN_STYLE[conn]}`}
       >
@@ -65,4 +67,15 @@ export function TopBar({ tab, selectedAgent, conn, age, onRefresh }: Props) {
       </button>
     </header>
   );
+}
+
+function AgeBadge({ ts }: { ts: number | null }) {
+  const [label, setLabel] = useState(() => persistedAge(ts));
+  useEffect(() => {
+    setLabel(persistedAge(ts));
+    if (ts === null) return;
+    const t = setInterval(() => setLabel(persistedAge(ts)), 1000);
+    return () => clearInterval(t);
+  }, [ts]);
+  return <span className="text-xs text-zinc-400 mono">{label}</span>;
 }

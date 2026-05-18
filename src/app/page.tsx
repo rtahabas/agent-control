@@ -8,7 +8,7 @@ import { TabRouter } from "@/components/pages/TabRouter";
 import { ChatPanel } from "@/components/ChatPanel";
 import type { Agent, State } from "@/lib/api";
 import { fetchAgents, fetchState } from "@/lib/api";
-import { persistedAge, usePersistedState } from "@/lib/persisted-state";
+import { usePersistedState } from "@/lib/persisted-state";
 import { isTab, type Tab } from "@/lib/tabs";
 
 const NONE: ModalState = { kind: "none" };
@@ -27,7 +27,6 @@ export default function Home() {
   const hydrated = th && sh;
   const [conn, setConn] = useState<ConnState>("loading");
   const [lastFetchTs, setLastFetchTs] = useState<number | null>(null);
-  const [age, setAge] = useState("");
   const [modal, setModal] = useState<ModalState>(NONE);
 
   const loadAgents = useCallback(async () => {
@@ -65,12 +64,6 @@ export default function Home() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [hydrated, loadState, selectedId]);
 
-  useEffect(() => {
-    if (lastFetchTs === null) return;
-    const t = setInterval(() => setAge(persistedAge(lastFetchTs)), 1000);
-    return () => clearInterval(t);
-  }, [lastFetchTs]);
-
   const selectedAgent = agents.find((a) => a.id === selectedId) ?? null;
   const refresh = () => { loadAgents(); loadState(selectedId, { fresh: true }); };
 
@@ -78,7 +71,7 @@ export default function Home() {
     <div className="flex h-screen overflow-hidden">
       <Sidebar tab={tab} onTabChange={setTab} selectedAgent={selectedAgent} agentCount={agents.length} />
       <main className="flex-1 flex flex-col min-w-0">
-        <TopBar tab={tab} selectedAgent={selectedAgent} conn={conn} age={age} onRefresh={refresh} />
+        <TopBar tab={tab} selectedAgent={selectedAgent} conn={conn} lastFetchTs={lastFetchTs} onRefresh={refresh} />
         <div className="flex-1 min-h-0 relative bg-zinc-50">
           <div className={`absolute inset-0 overflow-y-auto ${tab === "chat" ? "hidden" : ""}`}>
             <TabRouter
