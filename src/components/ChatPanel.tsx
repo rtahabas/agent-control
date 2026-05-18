@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { Agent } from "@/lib/api";
 import { Bubble } from "@/components/chat/Bubble";
 import { StatsBar } from "@/components/chat/StatsBar";
@@ -9,23 +9,24 @@ import { useChatSession } from "@/lib/use-chat-session";
 
 export function ChatPanel({ agent }: { agent: Agent | null }) {
   const session = useChatSession(agent);
-  const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [session.messages]);
 
+  // Stable handler so Composer's memoization (once we add React.memo there
+  // too) and our own re-render churn isn't driven by referential changes.
+  const handleSend = useCallback(
+    (text: string) => {
+      void session.send(text);
+    },
+    [session],
+  );
+
   if (!agent) {
     return <div className="p-8 text-sm text-zinc-400">Select an agent to chat.</div>;
   }
-
-  const submit = async () => {
-    const text = input.trim();
-    if (!text) return;
-    setInput("");
-    await session.send(text);
-  };
 
   return (
     <div className="flex flex-col h-full">
@@ -61,10 +62,8 @@ export function ChatPanel({ agent }: { agent: Agent | null }) {
           />
         )}
         <Composer
-          input={input}
-          setInput={setInput}
           busy={session.busy}
-          onSend={submit}
+          onSend={handleSend}
           onCancel={session.cancel}
         />
       </div>

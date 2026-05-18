@@ -1,14 +1,27 @@
 "use client";
 
+import { useState } from "react";
+
 interface Props {
-  input: string;
-  setInput: (s: string) => void;
   busy: boolean;
-  onSend: () => void;
+  onSend: (text: string) => void;
   onCancel: () => void;
 }
 
-export function Composer({ input, setInput, busy, onSend, onCancel }: Props) {
+// Composer owns its own input state so a keystroke does not re-render
+// the parent ChatPanel — that re-render would walk every Bubble and
+// every Markdown/SyntaxHighlighter underneath, which adds 50-200ms of
+// jank per character on a busy conversation.
+export function Composer({ busy, onSend, onCancel }: Props) {
+  const [input, setInput] = useState("");
+
+  const submit = () => {
+    const text = input.trim();
+    if (!text) return;
+    setInput("");
+    onSend(text);
+  };
+
   return (
     <div className="flex items-end gap-2">
       <textarea
@@ -17,7 +30,7 @@ export function Composer({ input, setInput, busy, onSend, onCancel }: Props) {
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            onSend();
+            submit();
           }
         }}
         disabled={busy}
@@ -34,7 +47,7 @@ export function Composer({ input, setInput, busy, onSend, onCancel }: Props) {
         </button>
       ) : (
         <button
-          onClick={onSend}
+          onClick={submit}
           disabled={!input.trim()}
           className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 text-white hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed"
         >
