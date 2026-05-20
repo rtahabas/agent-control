@@ -6,7 +6,14 @@ import { registerRuntimeContext } from "@/lib/runtime-context-subscriber";
 import { registerSkillSubscriptions } from "@/lib/skill-subscriber";
 
 registerRuntimeContext();
-void registerSkillSubscriptions();
+
+// Skill registration is async (dynamic import). Hold the promise so POST
+// handlers can await readiness instead of racing the first emit.
+const skillsReady: Promise<unknown> = registerSkillSubscriptions().catch(
+  (err) => {
+    console.error("[chat/send] skill registration failed:", err);
+  },
+);
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,6 +33,8 @@ function badRequest(error: string, status = 400) {
 }
 
 export async function POST(req: Request) {
+  await skillsReady;
+
   let body: SendBody;
   try {
     body = (await req.json()) as SendBody;
