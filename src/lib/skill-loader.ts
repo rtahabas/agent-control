@@ -36,7 +36,7 @@ export async function loadSkillModule(skillDir: string): Promise<SkillRegisterFn
 
   let mod: unknown;
   try {
-    mod = await import(/* @vite-ignore */ pathToFileURL(entry).href);
+    mod = await import(/* webpackIgnore: true */ pathToFileURL(entry).href);
   } catch (err) {
     console.error(`[skill-loader] import failed for ${entry}:`, err);
     return null;
