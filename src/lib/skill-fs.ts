@@ -10,6 +10,23 @@ export {
   type SkillLifecycle,
 } from "@/lib/skill-parse";
 
+async function isDirOrSymlinkToDir(
+  parent: string,
+  entry: { name: string; isDirectory: () => boolean; isSymbolicLink: () => boolean },
+): Promise<boolean> {
+  if (entry.isDirectory()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  // Dirent#isDirectory() is false for symlinks even when the target is a dir;
+  // resolve the link to keep "skill dir" lookups working through symlinks
+  // (used when skill repos live outside the project tree).
+  try {
+    const stat = await fs.stat(path.join(parent, entry.name));
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 export async function readSkillsDir(dir: string) {
   let entries;
   try {
@@ -19,7 +36,7 @@ export async function readSkillsDir(dir: string) {
   }
   const out = [];
   for (const e of entries) {
-    if (!e.isDirectory()) continue;
+    if (!(await isDirOrSymlinkToDir(dir, e))) continue;
     const skillFile = path.join(dir, e.name, "SKILL.md");
     let raw: string;
     try {
