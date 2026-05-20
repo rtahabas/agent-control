@@ -27,11 +27,23 @@ export async function postDecide(
     )
   );
   try {
-    await fetch("/api/chat/permission", {
+    const res = await fetch("/api/chat/permission", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tool_use_id: toolUseId, decision, always: !!always }),
     });
+    if (res.status === 410) {
+      // Orphan card — server forgot the request (restart / abort / already
+      // resolved). Mark it expired so the user gets a clear "this card is
+      // dead" cue instead of a silent no-op.
+      setMessages((arr) =>
+        arr.map((x) =>
+          x.role === "permission" && x.permission?.tool_use_id === toolUseId
+            ? { ...x, permission: { ...x.permission, status: "expired" } }
+            : x
+        )
+      );
+    }
   } catch (e: unknown) {
     setError(e instanceof Error ? e.message : String(e));
   }

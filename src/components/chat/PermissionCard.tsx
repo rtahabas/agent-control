@@ -34,7 +34,7 @@ export function PermissionCard({
         {pending ? (
           <Actions toolUseId={req.tool_use_id} onDecide={onDecide} />
         ) : (
-          <Verdict status={req.status === "allowed" ? "allowed" : "denied"} always={!!req.always} />
+          <Verdict status={req.status} always={!!req.always} />
         )}
       </div>
     </div>
@@ -66,11 +66,24 @@ function Actions({ toolUseId, onDecide }: { toolUseId: string; onDecide?: Decide
   );
 }
 
-function Verdict({ status, always }: { status: "allowed" | "denied"; always: boolean }) {
+function Verdict({
+  status,
+  always,
+}: {
+  status: "allowed" | "denied" | "expired" | "pending";
+  always: boolean;
+}) {
   if (status === "allowed") {
     return (
       <div className="px-3 py-2 text-xs text-emerald-700 bg-emerald-50 border-t border-emerald-100">
         Allowed{always ? " · always for this session" : ""}
+      </div>
+    );
+  }
+  if (status === "expired") {
+    return (
+      <div className="px-3 py-2 text-xs text-zinc-500 bg-zinc-50 border-t border-zinc-200">
+        Expired · server no longer has this request (likely after a restart or already resolved)
       </div>
     );
   }

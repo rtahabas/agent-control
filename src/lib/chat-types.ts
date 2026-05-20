@@ -29,7 +29,7 @@ export interface ToolCall {
   done?: boolean;
 }
 
-export type PermissionStatus = "pending" | "allowed" | "denied";
+export type PermissionStatus = "pending" | "allowed" | "denied" | "expired";
 
 export interface PermissionRequest {
   tool_use_id: string;
