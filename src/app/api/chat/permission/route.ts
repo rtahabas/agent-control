@@ -22,7 +22,13 @@ export async function POST(req: Request) {
   }
   const ok = decidePermission(body.tool_use_id, body.decision, body.always);
   if (!ok) {
-    return NextResponse.json({ error: "request not pending" }, { status: 404 });
+    // The permission request either already resolved, was aborted, or the
+    // pending map was lost across a server restart. Surface "expired" so
+    // the UI can mark the orphan card without a console-spamming 404.
+    return NextResponse.json(
+      { ok: false, reason: "expired" },
+      { status: 410 },
+    );
   }
   return NextResponse.json({ ok: true });
 }
