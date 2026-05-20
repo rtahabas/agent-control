@@ -44,10 +44,16 @@ export async function registerSkillSubscriptions(options: RegisterOptions = {}):
 
   const skills = await loader();
   let total = 0;
+  let loaded = 0;
   for (const skill of skills) {
     if (skill.enabled === false) continue;
-    total += await loadAndRun(skill, sourceDir, moduleLoader);
+    const count = await loadAndRun(skill, sourceDir, moduleLoader);
+    if (count > 0) loaded++;
+    total += count;
   }
+  console.info(
+    `[skill-subscriber] registered ${total} hook(s) across ${loaded} skill(s) from ${sourceDir}`,
+  );
   return total;
 }
 
