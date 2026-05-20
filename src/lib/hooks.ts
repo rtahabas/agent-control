@@ -19,6 +19,7 @@ export interface AgentHookMap {
     readonly agentId: string;
     readonly cwd: string;
     readonly sessionId: string | null;
+    readonly userMessage: string;
     contextSections: string[];
   };
   before_tool_call: {

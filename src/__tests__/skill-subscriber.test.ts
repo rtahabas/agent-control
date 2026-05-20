@@ -113,6 +113,7 @@ describe("registerSkillSubscriptions", () => {
       agentId: "a",
       cwd: "/x",
       sessionId: null,
+      userMessage: "hi",
       contextSections: [],
     });
     expect(result.contextSections).toEqual([]);
@@ -165,6 +166,7 @@ describe("registerSkillSubscriptions", () => {
       agentId: "a",
       cwd: "/x",
       sessionId: null,
+      userMessage: "hi",
       contextSections: ["seed"],
     });
     expect(result.contextSections).toEqual(["seed", "tagged"]);
