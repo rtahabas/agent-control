@@ -19,6 +19,7 @@ describe("registerRuntimeContext", () => {
       agentId: "alpha",
       cwd: "/x",
       sessionId: null,
+      userMessage: "hi",
       contextSections: [],
     });
     expect(result.contextSections).toHaveLength(1);
@@ -35,6 +36,7 @@ describe("registerRuntimeContext", () => {
       agentId: "alpha",
       cwd: "/x",
       sessionId: null,
+      userMessage: "hi",
       contextSections: [],
     });
     expect(result.contextSections).toHaveLength(1);
@@ -50,6 +52,7 @@ describe("registerRuntimeContext", () => {
       agentId: "beta",
       cwd: "/y",
       sessionId: null,
+      userMessage: "hi",
       contextSections: [],
     });
     expect(result.contextSections).toHaveLength(2);
@@ -65,12 +68,14 @@ describe("registerRuntimeContext", () => {
       agentId: "first",
       cwd: "/x",
       sessionId: null,
+      userMessage: "hi",
       contextSections: [],
     });
     const b = await agentHooks.emit("before_agent_reply", {
       agentId: "second",
       cwd: "/x",
       sessionId: null,
+      userMessage: "hi",
       contextSections: [],
     });
     expect(a.contextSections[0]).toContain("agent=first");

@@ -54,6 +54,7 @@ export const claudeSdkAdapter: AgentHarness = {
       agentId: params.agentId,
       cwd: params.cwd,
       sessionId: params.sessionId ?? null,
+      userMessage: params.message,
       contextSections: [],
     });
 

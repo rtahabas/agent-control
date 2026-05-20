@@ -44,6 +44,7 @@ describe("loadSkillModule", () => {
       agentId: "alpha",
       cwd: "/x",
       sessionId: null,
+      userMessage: "hi",
       contextSections: ["seed"],
     });
     expect(result.contextSections).toEqual(["seed", "echo:alpha"]);
