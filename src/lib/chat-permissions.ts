@@ -9,9 +9,24 @@ interface Pending {
   sessionId: string | null;
 }
 
-const pending = new Map<string, Pending>();
-const pendingQuestions = new Map<string, (answers: Record<string, string>) => void>();
-const sessionAllowlists = new Map<string, Set<string>>();
+// Module-level Maps are reset on Next.js dev hot-reload, which strands any
+// in-flight canUseTool promise (its `pending` entry vanishes, so the next
+// /api/chat/permission call 404s and the stream hangs forever). Caching on
+// globalThis pins the Maps to the Node.js process lifetime instead.
+const globalForChatPermissions = globalThis as unknown as {
+  __chatPending?: Map<string, Pending>;
+  __chatPendingQuestions?: Map<string, (answers: Record<string, string>) => void>;
+  __chatSessionAllowlists?: Map<string, Set<string>>;
+};
+const pending = (globalForChatPermissions.__chatPending ??= new Map<string, Pending>());
+const pendingQuestions = (globalForChatPermissions.__chatPendingQuestions ??= new Map<
+  string,
+  (answers: Record<string, string>) => void
+>());
+const sessionAllowlists = (globalForChatPermissions.__chatSessionAllowlists ??= new Map<
+  string,
+  Set<string>
+>());
 
 export function answerQuestion(toolUseId: string, answers: Record<string, string>): boolean {
   const resolve = pendingQuestions.get(toolUseId);
