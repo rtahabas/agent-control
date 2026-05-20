@@ -1,48 +1,54 @@
-import { agentHooks } from "@/lib/hooks";
+import path from "node:path";
+import { createSkillApi, type SkillRegisterFn } from "@/lib/skill-api";
+import { loadSkillModule } from "@/lib/skill-loader";
 import { readSkillsCatalog } from "@/lib/skills-catalog";
 import type { SkillEntry } from "@/lib/skill-parse";
 
-type AgentHookName =
-  | "before_model_resolve"
-  | "before_prompt_build"
-  | "before_agent_reply"
-  | "before_tool_call"
-  | "after_tool_call"
-  | "agent_end";
-
-const VALID_HOOK_NAMES: readonly AgentHookName[] = [
-  "before_model_resolve",
-  "before_prompt_build",
-  "before_agent_reply",
-  "before_tool_call",
-  "after_tool_call",
-  "agent_end",
-];
-
-function isValidHookName(name: string): name is AgentHookName {
-  return (VALID_HOOK_NAMES as readonly string[]).includes(name);
+export interface RegisterOptions {
+  loader?: () => Promise<SkillEntry[]>;
+  sourceDir?: string;
+  moduleLoader?: (skillDir: string) => Promise<SkillRegisterFn | null>;
 }
 
 let registered = false;
 
-export async function registerSkillSubscriptions(
-  loader: () => Promise<SkillEntry[]> = readSkillsCatalog,
+async function loadAndRun(
+  skill: SkillEntry,
+  sourceDir: string,
+  moduleLoader: NonNullable<RegisterOptions["moduleLoader"]>,
 ): Promise<number> {
+  const skillDir = path.join(sourceDir, skill.name);
+  const register = await moduleLoader(skillDir);
+  if (!register) return 0;
+
+  const handle = createSkillApi();
+  try {
+    await register(handle.api);
+  } catch (err) {
+    console.error(`[skill-subscriber] ${skill.name} register threw:`, err);
+    handle.dispose();
+    return 0;
+  }
+  return handle.hookCount();
+}
+
+export async function registerSkillSubscriptions(options: RegisterOptions = {}): Promise<number> {
   if (registered) return 0;
   registered = true;
+
+  const sourceDir = options.sourceDir ?? process.env.SKILLS_SOURCE_DIR;
+  if (!sourceDir) return 0;
+
+  const loader = options.loader ?? readSkillsCatalog;
+  const moduleLoader = options.moduleLoader ?? loadSkillModule;
+
   const skills = await loader();
-  let count = 0;
+  let total = 0;
   for (const skill of skills) {
     if (skill.enabled === false) continue;
-    const hooks = skill.lifecycle?.hooks;
-    if (!hooks) continue;
-    for (const name of hooks) {
-      if (!isValidHookName(name)) continue;
-      agentHooks.on(name, (ctx) => ctx);
-      count++;
-    }
+    total += await loadAndRun(skill, sourceDir, moduleLoader);
   }
-  return count;
+  return total;
 }
 
 export function _resetSkillSubscriptionsForTests(): void {
