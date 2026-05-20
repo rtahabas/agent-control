@@ -64,9 +64,13 @@ export function createHookBus<HookMap>(): HookBus<HookMap> {
       if (!arr || arr.length === 0) return ctx;
       let current: HookMap[K] = ctx;
       for (const handler of arr) {
-        const result = await (handler as HookHandler<HookMap[K]>)(current);
-        if (result !== undefined) {
-          current = result;
+        try {
+          const result = await (handler as HookHandler<HookMap[K]>)(current);
+          if (result !== undefined) {
+            current = result;
+          }
+        } catch (err) {
+          console.error(`[hook-bus] ${String(hook)} handler threw:`, err);
         }
       }
       return current;

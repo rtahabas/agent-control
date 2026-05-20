@@ -109,6 +109,49 @@ describe("createHookBus", () => {
     });
   });
 
+  describe("handler isolation", () => {
+    it("swallows a throwing handler and still invokes the next one", async () => {
+      const bus = createHookBus<AgentHookMap>();
+      const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      bus.on("before_prompt_build", () => {
+        throw new Error("first boom");
+      });
+      bus.on("before_prompt_build", (ctx) => ({
+        ...ctx,
+        systemPrompt: ctx.systemPrompt + " survived",
+      }));
+      const result = await bus.emit("before_prompt_build", {
+        systemPrompt: "base",
+        userMessage: "u",
+      });
+      expect(result.systemPrompt).toBe("base survived");
+      expect(errSpy).toHaveBeenCalled();
+      errSpy.mockRestore();
+    });
+
+    it("preserves prior context when a handler in the middle throws", async () => {
+      const bus = createHookBus<AgentHookMap>();
+      const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      bus.on("before_prompt_build", (ctx) => ({
+        ...ctx,
+        systemPrompt: ctx.systemPrompt + " A",
+      }));
+      bus.on("before_prompt_build", () => {
+        throw new Error("middle boom");
+      });
+      bus.on("before_prompt_build", (ctx) => ({
+        ...ctx,
+        systemPrompt: ctx.systemPrompt + " C",
+      }));
+      const result = await bus.emit("before_prompt_build", {
+        systemPrompt: "x",
+        userMessage: "u",
+      });
+      expect(result.systemPrompt).toBe("x A C");
+      errSpy.mockRestore();
+    });
+  });
+
   describe("clear", () => {
     it("clears handlers for a specific hook only", async () => {
       const bus = createHookBus<AgentHookMap>();
