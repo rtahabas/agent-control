@@ -36,7 +36,7 @@ describe("loadSkillModule", () => {
     agentHooks.clear();
     const register = await loadSkillModule(path.join(FIXTURES, "echo-context"));
     expect(register).not.toBeNull();
-    const handle = createSkillApi();
+    const handle = createSkillApi("echo-context");
     await register!(handle.api);
     expect(handle.hookCount()).toBe(1);
 
