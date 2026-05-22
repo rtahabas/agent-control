@@ -21,7 +21,7 @@ async function loadAndRun(
   const register = await moduleLoader(skillDir);
   if (!register) return 0;
 
-  const handle = createSkillApi();
+  const handle = createSkillApi(skill.name);
   try {
     await register(handle.api);
   } catch (err) {
