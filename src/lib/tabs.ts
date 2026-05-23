@@ -22,28 +22,43 @@ export interface NavSection {
 
 export const PINNED_TOP: NavItem = { tab: "chat", label: "Chat" };
 
+// Sidebar information architecture:
+//   Workspace — where am I working? (overview + agent switch)
+//   Context   — what does this agent know? (memory, skills, sub-agents)
+//   Runtime   — how does it behave? (hooks, settings)
+//   Insights  — what did it do? (activity, tokens)
+//
+// Each group answers one question. "Agents" moved out of the bottom into
+// Workspace so agent switching is a top-level concern, not a footnote.
 export const NAV: NavSection[] = [
   {
-    heading: "Monitoring",
+    heading: "Workspace",
     items: [
       { tab: "overview", label: "Overview" },
-      { tab: "tokens", label: "Tokens & Cost" },
-      { tab: "activity", label: "Activity Log" },
-      { tab: "skills", label: "Skills" },
-      { tab: "memory", label: "Memory" },
+      { tab: "agents", label: "Agents" },
     ],
   },
   {
-    heading: "Configure",
+    heading: "Context",
     items: [
+      { tab: "memory", label: "Memory" },
+      { tab: "skills", label: "Skills" },
       { tab: "sub-agents", label: "Sub-agents" },
+    ],
+  },
+  {
+    heading: "Runtime",
+    items: [
       { tab: "hooks", label: "Hooks" },
       { tab: "settings", label: "Settings" },
     ],
   },
   {
-    heading: "Workspace",
-    items: [{ tab: "agents", label: "Agents" }],
+    heading: "Insights",
+    items: [
+      { tab: "activity", label: "Activity Log" },
+      { tab: "tokens", label: "Tokens & Cost" },
+    ],
   },
 ];
 
