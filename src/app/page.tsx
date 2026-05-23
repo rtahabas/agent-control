@@ -33,12 +33,24 @@ export default function Home() {
     try {
       const list = await fetchAgents();
       setAgents(list);
-      setSelectedId((cur) => {
-        if (cur && list.some((a) => a.id === cur)) return cur;
-        return list[0]?.id ?? null;
-      });
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const urlAgent = params.get("agent");
+        const urlTab = params.get("tab");
+        if (urlTab && isTab(urlTab)) setTab(urlTab);
+        setSelectedId((cur) => {
+          if (urlAgent && list.some((a) => a.id === urlAgent)) return urlAgent;
+          if (cur && list.some((a) => a.id === cur)) return cur;
+          return list[0]?.id ?? null;
+        });
+      } else {
+        setSelectedId((cur) => {
+          if (cur && list.some((a) => a.id === cur)) return cur;
+          return list[0]?.id ?? null;
+        });
+      }
     } catch (e) { console.error("agents:", e); }
-  }, [setSelectedId]);
+  }, [setSelectedId, setTab]);
 
   const loadState = useCallback(async (agentId: string | null, opts?: { fresh?: boolean }) => {
     setConn("loading");
@@ -63,6 +75,39 @@ export default function Home() {
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [hydrated, loadState, selectedId]);
+
+  // Sync (selectedId, tab) → URL (?agent=<id>&tab=<tab>) for bookmarkable / shareable links.
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    let mutated = false;
+    if (selectedId && params.get("agent") !== selectedId) {
+      params.set("agent", selectedId); mutated = true;
+    } else if (!selectedId && params.has("agent")) {
+      params.delete("agent"); mutated = true;
+    }
+    if (tab && params.get("tab") !== tab) {
+      params.set("tab", tab); mutated = true;
+    }
+    if (mutated) {
+      const qs = params.toString();
+      window.history.replaceState(null, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+    }
+  }, [hydrated, selectedId, tab]);
+
+  // Listen to browser back/forward — sync URL back into state.
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+    const onPop = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlAgent = params.get("agent");
+      const urlTab = params.get("tab");
+      if (urlAgent) setSelectedId(urlAgent);
+      if (urlTab && isTab(urlTab)) setTab(urlTab);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [hydrated, setSelectedId, setTab]);
 
   const selectedAgent = agents.find((a) => a.id === selectedId) ?? null;
   const refresh = () => { loadAgents(); loadState(selectedId, { fresh: true }); };

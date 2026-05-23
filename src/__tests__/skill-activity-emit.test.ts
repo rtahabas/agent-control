@@ -62,6 +62,27 @@ describe("resolveLogPath", () => {
   it("returns null when no source can be resolved", () => {
     expect(resolveLogPath()).toBeNull();
   });
+
+  it("agent-scoped: prefers agentPath over SKILLS_SOURCE_DIR env", () => {
+    process.env.SKILLS_SOURCE_DIR = "/env/.claude/skills";
+    const agentRoot = path.join(tmpRoot, "agent-x");
+    mkdirSync(agentRoot, { recursive: true });
+    expect(resolveLogPath({ agentPath: agentRoot })).toBe(
+      path.join(agentRoot, "memory", "memory", "skill-activity.log"),
+    );
+  });
+
+  it("agent-scoped: different agents derive different log paths", () => {
+    const agentA = path.join(tmpRoot, "agent-a");
+    const agentB = path.join(tmpRoot, "agent-b");
+    mkdirSync(agentA, { recursive: true });
+    mkdirSync(agentB, { recursive: true });
+    const a = resolveLogPath({ agentPath: agentA });
+    const b = resolveLogPath({ agentPath: agentB });
+    expect(a).not.toBe(b);
+    expect(a).toContain("agent-a");
+    expect(b).toContain("agent-b");
+  });
 });
 
 describe("emitSkillActivity", () => {

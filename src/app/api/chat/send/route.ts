@@ -7,13 +7,22 @@ import { registerSkillSubscriptions } from "@/lib/skill-subscriber";
 
 registerRuntimeContext();
 
-// Skill registration is async (dynamic import). Hold the promise so POST
-// handlers can await readiness instead of racing the first emit.
-const skillsReady: Promise<unknown> = registerSkillSubscriptions().catch(
-  (err) => {
-    console.error("[chat/send] skill registration failed:", err);
-  },
-);
+// Skill registration is per-agent and lazy. Each agentId is registered once
+// (idempotent on repeat) when the first chat message for that agent arrives.
+// The Map tracks the in-flight registration promise per agentId so concurrent
+// POSTs for the same agent await a single registration pass.
+const skillsReadyByAgent = new Map<string, Promise<unknown>>();
+
+function ensureSkillsRegistered(agentId: string): Promise<unknown> {
+  let pending = skillsReadyByAgent.get(agentId);
+  if (!pending) {
+    pending = registerSkillSubscriptions({ agentId }).catch((err) => {
+      console.error(`[chat/send] skill registration failed for ${agentId}:`, err);
+    });
+    skillsReadyByAgent.set(agentId, pending);
+  }
+  return pending;
+}
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -33,8 +42,6 @@ function badRequest(error: string, status = 400) {
 }
 
 export async function POST(req: Request) {
-  await skillsReady;
-
   let body: SendBody;
   try {
     body = (await req.json()) as SendBody;
@@ -50,6 +57,9 @@ export async function POST(req: Request) {
   if (!fs.existsSync(agentPath) || !fs.statSync(agentPath).isDirectory()) {
     return badRequest("agent path missing", 500);
   }
+
+  // Register this agent's skills once (idempotent). Await before streaming.
+  await ensureSkillsRegistered(agentId);
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
