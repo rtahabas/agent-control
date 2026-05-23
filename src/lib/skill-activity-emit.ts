@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, appendFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { getAgentPath } from "./db";
 
 const HEADER = [
   "# Skill activity log — one line per invocation.",
@@ -11,22 +12,43 @@ const HEADER = [
 
 export interface EmitOptions {
   logPath?: string;
+  agentId?: string;
+  agentPath?: string;
   sourceDir?: string;
 }
 
+/**
+ * Resolve the skill-activity log path.
+ *
+ * Resolution order:
+ *   1. explicit `opts.logPath`
+ *   2. `SKILL_ACTIVITY_LOG_PATH` env (legacy override)
+ *   3. agent-derived: `<agentPath>/memory/memory/skill-activity.log` (canonical) or `<agentPath>/memory/skill-activity.log` (flat)
+ *      where `agentPath` comes from `opts.agentPath` or `getAgentPath(opts.agentId)`
+ *   4. legacy `sourceDir` based derivation (assumes sourceDir = `<root>/.claude/skills`)
+ *   5. legacy `SKILLS_SOURCE_DIR` env (same derivation as #4)
+ */
 export function resolveLogPath(opts: EmitOptions = {}): string | null {
   const explicit = opts.logPath ?? process.env.SKILL_ACTIVITY_LOG_PATH;
   if (explicit) return explicit;
-  const sourceDir = opts.sourceDir ?? process.env.SKILLS_SOURCE_DIR;
-  if (!sourceDir) return null;
-  // SKILLS_SOURCE_DIR is .../<PROJECT_ROOT>/.claude/skills. Two layouts seen
-  // in practice for the bash-hook log file location:
+
+  // Prefer agent-derived path when caller knows the agent.
+  let projectRoot: string | null = null;
+  const agentPath = opts.agentPath ?? (opts.agentId ? getAgentPath(opts.agentId) : null);
+  if (agentPath) {
+    projectRoot = agentPath;
+  } else {
+    const sourceDir = opts.sourceDir ?? process.env.SKILLS_SOURCE_DIR;
+    if (sourceDir) projectRoot = path.resolve(sourceDir, "../..");
+  }
+  if (!projectRoot) return null;
+
+  // Two layouts seen in practice for the bash-hook log file location:
   //   - nested: <PROJECT_ROOT>/memory/memory/skill-activity.log  (canonical, Agent-One)
   //   - flat:   <PROJECT_ROOT>/memory/skill-activity.log         (legacy assumption)
   // Prefer the existing file so native emit converges with the bash hook
   // writer instead of creating a parallel ghost log. When neither exists,
   // default to the nested location which matches the canonical layout.
-  const projectRoot = path.resolve(sourceDir, "../..");
   const candidates = [
     path.join(projectRoot, "memory", "memory", "skill-activity.log"),
     path.join(projectRoot, "memory", "skill-activity.log"),

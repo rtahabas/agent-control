@@ -171,5 +171,62 @@ describe("registerSkillSubscriptions", () => {
     });
     expect(result.contextSections).toEqual(["seed", "tagged"]);
   });
+
+  it("registers each agentId independently — different agents do not share idempotency", async () => {
+    const optsA = {
+      agentId: "agent-a",
+      sourceDir: "/skills-a",
+      loader: listLoader([{ name: "x", description: "" }]),
+      moduleLoader: moduleLoaderFor({
+        x: (api) => api.on("before_agent_reply", (ctx) => ctx),
+      }),
+    };
+    const optsB = {
+      agentId: "agent-b",
+      sourceDir: "/skills-b",
+      loader: listLoader([
+        { name: "y", description: "" },
+        { name: "z", description: "" },
+      ]),
+      moduleLoader: moduleLoaderFor({
+        y: (api) => api.on("before_agent_reply", (ctx) => ctx),
+        z: (api) => api.on("agent_end", () => undefined),
+      }),
+    };
+
+    const aFirst = await registerSkillSubscriptions(optsA);
+    const bFirst = await registerSkillSubscriptions(optsB);
+    expect(aFirst).toBe(1);
+    expect(bFirst).toBe(2);
+
+    // Re-calling either is idempotent (per-agent).
+    const aSecond = await registerSkillSubscriptions(optsA);
+    const bSecond = await registerSkillSubscriptions(optsB);
+    expect(aSecond).toBe(0);
+    expect(bSecond).toBe(0);
+  });
+
+  it("global registration (no agentId) is distinct from agent-scoped registration", async () => {
+    const sharedSource = "/skills-shared";
+    const globalCount = await registerSkillSubscriptions({
+      sourceDir: sharedSource,
+      loader: listLoader([{ name: "g", description: "" }]),
+      moduleLoader: moduleLoaderFor({
+        g: (api) => api.on("before_agent_reply", (ctx) => ctx),
+      }),
+    });
+    expect(globalCount).toBe(1);
+
+    // An agent-scoped call with the same sourceDir still registers (different key).
+    const agentCount = await registerSkillSubscriptions({
+      agentId: "agent-c",
+      sourceDir: sharedSource,
+      loader: listLoader([{ name: "g", description: "" }]),
+      moduleLoader: moduleLoaderFor({
+        g: (api) => api.on("agent_end", () => undefined),
+      }),
+    });
+    expect(agentCount).toBe(1);
+  });
 });
 
