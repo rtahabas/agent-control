@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import type { Agent } from "@/lib/api";
+import type { Attachment } from "@/lib/chat-types";
 import { Bubble } from "@/components/chat/Bubble";
 import { StatsBar } from "@/components/chat/StatsBar";
 import { Composer } from "@/components/chat/Composer";
@@ -18,8 +19,8 @@ export function ChatPanel({ agent }: { agent: Agent | null }) {
   // Stable handler so Composer's memoization (once we add React.memo there
   // too) and our own re-render churn isn't driven by referential changes.
   const handleSend = useCallback(
-    (text: string) => {
-      void session.send(text);
+    (text: string, attachment: Attachment | null) => {
+      void session.send(text, attachment);
     },
     [session],
   );

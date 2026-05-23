@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Agent } from "@/lib/api";
 import {
   EMPTY_STATS,
+  type Attachment,
   type ChatMessage,
   type CumulativeStats,
   type TurnInfo,
@@ -76,10 +77,17 @@ export function useChatSession(agent: Agent | null) {
   }, []);
 
   const send = useCallback(
-    async (text: string) => {
-      if (!agent || !text.trim() || busy) return;
+    async (text: string, attachment: Attachment | null = null) => {
+      const trimmed = text.trim();
+      if (!agent || busy) return;
+      if (!trimmed && !attachment) return;
       setError(null);
-      const userMsg: ChatMessage = { id: rand(), role: "user", text: text.trim() };
+      const userMsg: ChatMessage = {
+        id: rand(),
+        role: "user",
+        text: trimmed,
+        ...(attachment ? { attachment } : {}),
+      };
       const asstId = rand();
       const asstMsg: ChatMessage = { id: asstId, role: "assistant", text: "", streaming: true };
       currentAsstIdRef.current = asstId;
@@ -88,10 +96,16 @@ export function useChatSession(agent: Agent | null) {
       const ac = new AbortController();
       abortRef.current = ac;
       try {
+        const body: Record<string, unknown> = {
+          agent_id: agent.id,
+          message: trimmed,
+          session_id: sessionId,
+        };
+        if (attachment) body.attachment = attachment;
         const res = await fetch("/api/chat/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ agent_id: agent.id, message: text.trim(), session_id: sessionId }),
+          body: JSON.stringify(body),
           signal: ac.signal,
         });
         await streamSse(res, dispatchEvent);

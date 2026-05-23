@@ -1,13 +1,47 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { makeCanUseTool, type EmitFn } from "@/lib/chat-permissions";
+import type { Attachment } from "@/lib/chat-types";
+import { randomUUID } from "node:crypto";
 
 export { decidePermission } from "@/lib/chat-permissions";
 export type { EmitFn };
 
 interface ToolBuf { name: string; id: string | null; input: string }
 
+// Build a one-shot AsyncIterable<SDKUserMessage> that delivers a single user
+// message with multimodal content blocks (text + image). Used when the caller
+// passes an attachment; the plain string prompt path is preserved for
+// text-only chats so multimodal-disabled code paths don't change shape.
+async function* multimodalPrompt(
+  message: string,
+  attachment: Attachment,
+): AsyncIterable<{
+  type: "user";
+  message: { role: "user"; content: Array<Record<string, unknown>> };
+  parent_tool_use_id: null;
+  session_id: string;
+}> {
+  const content: Array<Record<string, unknown>> = [];
+  if (message) content.push({ type: "text", text: message });
+  content.push({
+    type: "image",
+    source: {
+      type: "base64",
+      media_type: attachment.mime,
+      data: attachment.dataBase64,
+    },
+  });
+  yield {
+    type: "user",
+    message: { role: "user", content },
+    parent_tool_use_id: null,
+    session_id: randomUUID(),
+  };
+}
+
 export async function spawnClaude({
   message,
+  attachment,
   sessionId,
   cwd,
   emit,
@@ -15,6 +49,7 @@ export async function spawnClaude({
   abortSignal,
 }: {
   message: string;
+  attachment?: Attachment | null;
   sessionId: string | null | undefined;
   cwd: string;
   emit: EmitFn;
@@ -27,8 +62,14 @@ export async function spawnClaude({
   let activeSessionId: string | null = sessionId ?? null;
   const toolBufs: Record<number, ToolBuf> = {};
 
+  // Multimodal: stream a single SDKUserMessage with content blocks.
+  // Text-only: keep the cheaper string prompt path.
+  const prompt = attachment
+    ? (multimodalPrompt(message, attachment) as Parameters<typeof query>[0]["prompt"])
+    : message;
+
   const iter = query({
-    prompt: message,
+    prompt,
     options: {
       cwd,
       abortController: ac,

@@ -77,6 +77,7 @@ export const claudeSdkAdapter: AgentHarness = {
 
     await spawnClaude({
       message: augmentedMessage,
+      attachment: params.attachment ?? null,
       sessionId: params.sessionId,
       cwd: params.cwd,
       emit: emitWrap,
