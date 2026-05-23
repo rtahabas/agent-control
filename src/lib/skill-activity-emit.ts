@@ -19,10 +19,22 @@ export function resolveLogPath(opts: EmitOptions = {}): string | null {
   if (explicit) return explicit;
   const sourceDir = opts.sourceDir ?? process.env.SKILLS_SOURCE_DIR;
   if (!sourceDir) return null;
-  // SKILLS_SOURCE_DIR is .../<MEMORY_ROOT>/.claude/skills — log lives at
-  // <MEMORY_ROOT>/memory/skill-activity.log to match the bash hook target.
-  const memoryRoot = path.resolve(sourceDir, "../..");
-  return path.join(memoryRoot, "memory", "skill-activity.log");
+  // SKILLS_SOURCE_DIR is .../<PROJECT_ROOT>/.claude/skills. Two layouts seen
+  // in practice for the bash-hook log file location:
+  //   - nested: <PROJECT_ROOT>/memory/memory/skill-activity.log  (canonical, Agent-One)
+  //   - flat:   <PROJECT_ROOT>/memory/skill-activity.log         (legacy assumption)
+  // Prefer the existing file so native emit converges with the bash hook
+  // writer instead of creating a parallel ghost log. When neither exists,
+  // default to the nested location which matches the canonical layout.
+  const projectRoot = path.resolve(sourceDir, "../..");
+  const candidates = [
+    path.join(projectRoot, "memory", "memory", "skill-activity.log"),
+    path.join(projectRoot, "memory", "skill-activity.log"),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return candidates[0];
 }
 
 export function emitSkillActivity(
