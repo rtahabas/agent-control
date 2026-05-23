@@ -4,6 +4,17 @@ import { getAgentPath } from "@/lib/db";
 import { claudeSdkAdapter } from "@/lib/claude-sdk-adapter";
 import { registerRuntimeContext } from "@/lib/runtime-context-subscriber";
 import { registerSkillSubscriptions } from "@/lib/skill-subscriber";
+import {
+  validateAttachmentInput,
+  type Attachment,
+  type AttachmentInput,
+} from "@/lib/chat-types";
+
+// Next.js JSON body limit needs raising for base64-encoded images (5MB raw →
+// ~7MB base64). The Next 16 App Router parses bodies in-route via req.json(),
+// which doesn't honor pages-router `bodyParser.sizeLimit`. We rely on the
+// Node fetch parser's default streaming limit (≥10MB) and validate size
+// ourselves below.
 
 registerRuntimeContext();
 
@@ -31,6 +42,7 @@ interface SendBody {
   agent_id: string;
   message: string;
   session_id?: string | null;
+  attachment?: AttachmentInput | null;
 }
 
 function sse(event: string, data: unknown): string {
@@ -51,7 +63,13 @@ export async function POST(req: Request) {
   const agentId = (body.agent_id || "").trim();
   const message = (body.message || "").trim();
   if (!agentId || !/^[a-z0-9_-]+$/.test(agentId)) return badRequest("invalid agent_id");
-  if (!message) return badRequest("empty message");
+  let attachment: Attachment | null = null;
+  if (body.attachment) {
+    const validated = validateAttachmentInput(body.attachment);
+    if (typeof validated === "string") return badRequest(validated);
+    attachment = validated;
+  }
+  if (!message && !attachment) return badRequest("empty message");
   const agentPath = getAgentPath(agentId);
   if (!agentPath) return badRequest("agent not found", 404);
   if (!fs.existsSync(agentPath) || !fs.statSync(agentPath).isDirectory()) {
@@ -79,6 +97,7 @@ export async function POST(req: Request) {
       void claudeSdkAdapter.runAttempt({
         agentId,
         message,
+        attachment,
         sessionId: body.session_id,
         cwd: agentPath,
         emit,

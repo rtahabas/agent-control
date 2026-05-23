@@ -1,7 +1,7 @@
 "use client";
 
 import { Markdown } from "../Markdown";
-import type { ChatMessage, ToolCall } from "@/lib/chat-types";
+import { attachmentDataUrl, type ChatMessage, type ToolCall } from "@/lib/chat-types";
 import { PermissionCard } from "./PermissionCard";
 import { QuestionCard } from "./QuestionCard";
 import { toolPreview } from "@/lib/tool-preview";
@@ -29,8 +29,19 @@ export function Bubble({
           isUser ? "bg-blue-600 text-white" : "bg-white border border-zinc-200 text-zinc-900"
         }`}
       >
+        {message.attachment && message.attachment.kind === "image" && (
+          <img
+            src={attachmentDataUrl(message.attachment)}
+            alt={message.attachment.name}
+            className={`mb-2 max-h-64 max-w-full rounded-lg ${
+              isUser ? "border border-blue-400" : "border border-zinc-200"
+            }`}
+          />
+        )}
         {isUser ? (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.text}</div>
+          message.text && (
+            <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.text}</div>
+          )
         ) : message.text === "" && message.streaming ? (
           <Dots />
         ) : (

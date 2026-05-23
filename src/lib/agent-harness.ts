@@ -1,3 +1,5 @@
+import type { Attachment } from "@/lib/chat-types";
+
 export type AgentHarnessEmit = (event: string, data: unknown) => void;
 
 export interface AgentHarnessSupportContext {
@@ -13,6 +15,7 @@ export interface AgentHarnessSupport {
 export interface AgentHarnessAttemptParams {
   readonly agentId: string;
   readonly message: string;
+  readonly attachment?: Attachment | null;
   readonly sessionId: string | null | undefined;
   readonly cwd: string;
   readonly emit: AgentHarnessEmit;
