@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { emitSkillActivity, resolveLogPath } from "@/lib/skill-activity-emit";
@@ -34,9 +34,29 @@ describe("resolveLogPath", () => {
     expect(resolveLogPath()).toBe("/env/log");
   });
 
-  it("derives from SKILLS_SOURCE_DIR by walking two dirs up", () => {
-    process.env.SKILLS_SOURCE_DIR = "/root/.claude/skills";
-    expect(resolveLogPath()).toBe("/root/memory/skill-activity.log");
+  it("defaults to nested layout (memory/memory/) when no log file exists yet", () => {
+    process.env.SKILLS_SOURCE_DIR = path.join(tmpRoot, ".claude", "skills");
+    expect(resolveLogPath()).toBe(
+      path.join(tmpRoot, "memory", "memory", "skill-activity.log"),
+    );
+  });
+
+  it("prefers existing flat-layout log when nested is missing (legacy compat)", () => {
+    const flatPath = path.join(tmpRoot, "memory", "skill-activity.log");
+    mkdirSync(path.dirname(flatPath), { recursive: true });
+    writeFileSync(flatPath, "# placeholder\n");
+    process.env.SKILLS_SOURCE_DIR = path.join(tmpRoot, ".claude", "skills");
+    expect(resolveLogPath()).toBe(flatPath);
+  });
+
+  it("prefers existing nested log over flat when both exist", () => {
+    const flatPath = path.join(tmpRoot, "memory", "skill-activity.log");
+    const nestedPath = path.join(tmpRoot, "memory", "memory", "skill-activity.log");
+    mkdirSync(path.dirname(nestedPath), { recursive: true });
+    writeFileSync(flatPath, "# placeholder\n");
+    writeFileSync(nestedPath, "# placeholder\n");
+    process.env.SKILLS_SOURCE_DIR = path.join(tmpRoot, ".claude", "skills");
+    expect(resolveLogPath()).toBe(nestedPath);
   });
 
   it("returns null when no source can be resolved", () => {
