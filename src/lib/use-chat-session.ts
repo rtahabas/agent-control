@@ -12,6 +12,14 @@ import {
 import { rand } from "@/lib/chat-fmt";
 import { parseSseBlock } from "@/lib/sse-parse";
 import {
+  parseSlash,
+  helpText,
+  fetchCustomCommandNames,
+  fetchCustomCommand,
+  fetchAgentModel,
+  setAgentModel,
+} from "@/lib/slash-commands";
+import {
   accumulate,
   clearSnapshot,
   loadSnapshot,
@@ -82,6 +90,73 @@ export function useChatSession(agent: Agent | null) {
       if (!agent || busy) return;
       if (!trimmed && !attachment) return;
       setError(null);
+
+      // Slash commands: this chat runs on the Agent SDK, not the CLI REPL, so slash
+      // commands never reach a REPL. Handle dashboard-native ones here; expand a custom
+      // project command (.claude/commands/<name>.md) into a normal prompt.
+      let messageToSend = trimmed;
+      if (trimmed.startsWith("/") && !attachment) {
+        const parsed = parseSlash(trimmed);
+        if (parsed?.name === "clear") {
+          setMessages([]);
+          clearSnapshot(agent.id);
+          return;
+        }
+        if (!parsed || parsed.name === "help") {
+          const names = await fetchCustomCommandNames(agent.id);
+          const echo: ChatMessage = { id: rand(), role: "user", text: trimmed };
+          const out: ChatMessage = {
+            id: rand(),
+            role: "assistant",
+            text: helpText(names),
+            done: true,
+          };
+          setMessages((m) => [...m, echo, out]);
+          return;
+        }
+        if (parsed.name === "model") {
+          const echo: ChatMessage = { id: rand(), role: "user", text: trimmed };
+          let out: ChatMessage;
+          if (!parsed.args) {
+            const cur = await fetchAgentModel(agent.id);
+            out = {
+              id: rand(),
+              role: "assistant",
+              done: true,
+              text:
+                `Current model: ${cur ?? "(default)"}\n` +
+                `Set with: /model <name>  (e.g. opus[1m], sonnet, haiku, claude-opus-4-8[1m])\n` +
+                `Takes effect on the next message/session.`,
+            };
+          } else {
+            const r = await setAgentModel(agent.id, parsed.args);
+            out = {
+              id: rand(),
+              role: "assistant",
+              done: true,
+              text: r.ok
+                ? `Model set to "${parsed.args}". Takes effect on the next message/session.`
+                : `Failed to set model: ${r.error}`,
+            };
+          }
+          setMessages((m) => [...m, echo, out]);
+          return;
+        }
+        const cmdBody = await fetchCustomCommand(agent.id, parsed.name);
+        if (cmdBody == null) {
+          const echo: ChatMessage = { id: rand(), role: "user", text: trimmed };
+          const out: ChatMessage = {
+            id: rand(),
+            role: "assistant",
+            text: `Unknown command: /${parsed.name}. Type /help for the list.`,
+            done: true,
+          };
+          setMessages((m) => [...m, echo, out]);
+          return;
+        }
+        messageToSend = parsed.args ? `${cmdBody}\n\n${parsed.args}` : cmdBody;
+      }
+
       const userMsg: ChatMessage = {
         id: rand(),
         role: "user",
@@ -98,7 +173,7 @@ export function useChatSession(agent: Agent | null) {
       try {
         const body: Record<string, unknown> = {
           agent_id: agent.id,
-          message: trimmed,
+          message: messageToSend,
           session_id: sessionId,
         };
         if (attachment) body.attachment = attachment;

@@ -117,7 +117,7 @@ while IFS= read -r ext; do
   fi
 done <<< "$LOG_UNIQUE"
 
-for s in "${INSTALLED[@]}"; do
+for s in ${INSTALLED[@]+"${INSTALLED[@]}"}; do
   count=0
   last=""
   i=0

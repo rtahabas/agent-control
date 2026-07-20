@@ -10,6 +10,13 @@ export interface ModelPrice {
 }
 
 const PRICES: Record<string, ModelPrice> = {
+  "claude-opus-4-8": {
+    input: 15,
+    output: 75,
+    cache_write_5m: 18.75,
+    cache_write_1h: 30,
+    cache_read: 1.5,
+  },
   "claude-opus-4-7": {
     input: 15,
     output: 75,
@@ -41,7 +48,7 @@ const PRICES: Record<string, ModelPrice> = {
 };
 
 function familyKey(model: string): string {
-  if (model.startsWith("claude-opus-4")) return "claude-opus-4-7";
+  if (model.startsWith("claude-opus-4")) return "claude-opus-4-8";
   if (model.startsWith("claude-sonnet-4")) return "claude-sonnet-4-6";
   if (model.startsWith("claude-haiku-4")) return "claude-haiku-4-5";
   return "default";
