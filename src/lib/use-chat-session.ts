@@ -1,14 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import type { Agent } from "@/lib/api";
-import {
-  EMPTY_STATS,
-  type Attachment,
-  type ChatMessage,
-  type CumulativeStats,
-  type TurnInfo,
-} from "@/lib/chat-types";
+import { type Attachment, type ChatMessage } from "@/lib/chat-types";
 import { rand } from "@/lib/chat-fmt";
 import { parseSseBlock } from "@/lib/sse-parse";
 import {
@@ -19,13 +13,18 @@ import {
   fetchAgentModel,
   setAgentModel,
 } from "@/lib/slash-commands";
+import { accumulate, clearSnapshot, turnFromPayload } from "@/lib/chat-helpers";
 import {
-  accumulate,
-  clearSnapshot,
-  loadSnapshot,
-  saveSnapshot,
-  turnFromPayload,
-} from "@/lib/chat-helpers";
+  EMPTY_RUN,
+  abortRun,
+  asstRef,
+  getRun,
+  hydrateRun,
+  resetRun,
+  setAbort,
+  subscribeRun,
+  updateRun,
+} from "@/lib/chat-store";
 import {
   applyAskUserQuestion,
   applyDelta,
@@ -41,71 +40,74 @@ import { attentionTitle, BASE_TITLE } from "@/lib/attention";
 import { runEndedMessage } from "@/lib/run-outcome";
 import { runNotification, showNotice } from "@/lib/run-notify";
 
+/** Writes messages for one agent, wherever that agent's transcript currently lives. */
+function messageWriter(agentId: string) {
+  return (updater: (arr: ChatMessage[]) => ChatMessage[]) =>
+    updateRun(agentId, (s) => ({ ...s, messages: updater(s.messages) }));
+}
+
+function errorWriter(agentId: string) {
+  return (e: string | null) => updateRun(agentId, (s) => ({ ...s, error: e }));
+}
+
 /**
- * @param visible whether the chat surface is the tab on screen. The panel stays
- * mounted behind other tabs so a run keeps streaming, which means keyboard
- * shortcuts have to be told what is actually being looked at.
+ * Translates one SSE event into state for the agent that started the run —
+ * bound to that agent, not to whoever is selected when the event arrives.
  */
-export function useChatSession(agent: Agent | null, visible = true) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [lastTurn, setLastTurn] = useState<TurnInfo | null>(null);
-  const [stats, setStats] = useState<CumulativeStats>(EMPTY_STATS);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const statsRef = useRef<CumulativeStats>(EMPTY_STATS);
-  const currentAsstIdRef = useRef<string | null>(null);
-  useEffect(() => { statsRef.current = stats; }, [stats]);
-  // dispatchEvent is deliberately dep-free so the SSE reader never re-binds mid-run;
-  // it reads the agent name through this mirror instead of closing over a stale one.
-  const agentNameRef = useRef<string | null>(null);
-  useEffect(() => { agentNameRef.current = agent?.name ?? null; }, [agent?.name]);
-  // Same reason: the keydown listener is bound once and reads visibility here
-  // rather than re-binding every time the user changes tabs.
-  const visibleRef = useRef(visible);
-  useEffect(() => { visibleRef.current = visible; }, [visible]);
+export function makeDispatch(agentId: string, agentName: string | null) {
+  const setMessages = messageWriter(agentId);
+  const setError = errorWriter(agentId);
+  const ctx: DispatchCtx = { setMessages, currentAsstIdRef: asstRef(agentId) };
 
-  useEffect(() => {
-    if (!agent) return;
-    const snap = loadSnapshot(agent.id);
-    setMessages(snap?.messages || []);
-    setSessionId(snap?.sessionId ?? null);
-    setLastTurn(snap?.lastTurn ?? null);
-    setStats(snap?.stats || EMPTY_STATS);
-    setError(null);
-  }, [agent?.id]);
-
-  useEffect(() => {
-    if (!agent) return;
-    saveSnapshot(agent.id, { messages, sessionId, lastTurn, stats });
-  }, [agent?.id, messages, sessionId, lastTurn, stats]);
-
-  const dispatchEvent = useCallback((block: string) => {
+  return (block: string) => {
     const parsed = parseSseBlock(block);
     if (!parsed || !parsed.payload) return;
-    const ctx: DispatchCtx = { setMessages, currentAsstIdRef };
     const { event, payload } = parsed;
-    if (event === "session" && typeof payload.id === "string") setSessionId(payload.id);
-    else if (event === "delta" && typeof payload.text === "string") applyDelta(payload.text, ctx);
-    else if (event === "tool_start") applyToolStart({ index: payload.index as number, name: (payload.name as string) || "tool", id: (payload.id as string | null) ?? null }, ctx);
-    else if (event === "tool_end") applyToolEnd({ index: payload.index as number, input: (payload.input as Record<string, unknown> | null) ?? null }, ctx);
-    else if (event === "permission_request") applyPermissionRequest(payload, ctx);
-    else if (event === "ask_user_question") applyAskUserQuestion(payload, ctx);
-    else if (event === "done") {
+    if (event === "session" && typeof payload.id === "string") {
+      const id = payload.id;
+      updateRun(agentId, (s) => ({ ...s, sessionId: id }));
+    } else if (event === "delta" && typeof payload.text === "string") {
+      applyDelta(payload.text, ctx);
+    } else if (event === "tool_start") {
+      applyToolStart(
+        {
+          index: payload.index as number,
+          name: (payload.name as string) || "tool",
+          id: (payload.id as string | null) ?? null,
+        },
+        ctx
+      );
+    } else if (event === "tool_end") {
+      applyToolEnd(
+        {
+          index: payload.index as number,
+          input: (payload.input as Record<string, unknown> | null) ?? null,
+        },
+        ctx
+      );
+    } else if (event === "permission_request") {
+      applyPermissionRequest(payload, ctx);
+    } else if (event === "ask_user_question") {
+      applyAskUserQuestion(payload, ctx);
+    } else if (event === "done") {
       const t = turnFromPayload(payload);
-      setLastTurn(t);
-      setStats((s) => accumulate(s, t));
-      setBusy(false);
-      setMessages((arr) => arr.map((x) => (x.streaming ? { ...x, streaming: false, done: true } : x)));
-      // A run can end without an error event — hitting the turn or cost cap
-      // just stops. Say so, otherwise the agent looks like it quit for no reason.
+      // A run can end without an error event — hitting the turn or cost cap just
+      // stops. Say so, otherwise the agent looks like it quit for no reason.
       const ended = runEndedMessage(
         payload.subtype as string | null,
         payload.num_turns as number | null,
         payload.errors as string[] | null
       );
-      if (ended) setError(ended);
+      updateRun(agentId, (s) => ({
+        ...s,
+        lastTurn: t,
+        stats: accumulate(s.stats, t),
+        busy: false,
+        messages: s.messages.map((x) =>
+          x.streaming ? { ...x, streaming: false, done: true } : x
+        ),
+        ...(ended ? { error: ended } : {}),
+      }));
       // Tell the user a long run is over when they are not looking at the tab.
       // Hooked to `done` rather than a busy transition on purpose: a run the user
       // cancelled never emits `done`, and they already know they cancelled it.
@@ -119,18 +121,52 @@ export function useChatSession(agent: Agent | null, visible = true) {
               costUsd: t.cost_usd,
               durationMs: t.duration_ms,
             },
-            agentNameRef.current
+            agentName
           )
         );
       }
-    } else if (event === "error" && typeof payload.message === "string") setError(payload.message);
-  }, []);
+    } else if (event === "error" && typeof payload.message === "string") {
+      setError(payload.message);
+    }
+  };
+}
+
+/**
+ * @param visible whether the chat surface is the tab on screen. The panel stays
+ * mounted behind other tabs so a run keeps streaming, which means keyboard
+ * shortcuts have to be told what is actually being looked at.
+ */
+export function useChatSession(agent: Agent | null, visible = true) {
+  const agentId = agent?.id ?? null;
+
+  // State lives per agent rather than in this component, so selecting another
+  // agent shows that agent's transcript while the first one keeps streaming.
+  const run = useSyncExternalStore(
+    useCallback(
+      (cb: () => void) => (agentId ? subscribeRun(agentId, cb) : () => {}),
+      [agentId]
+    ),
+    useCallback(() => (agentId ? getRun(agentId) : EMPTY_RUN), [agentId]),
+    () => EMPTY_RUN
+  );
+  const { messages, sessionId, lastTurn, stats, busy, error } = run;
+
+  useEffect(() => {
+    if (agentId) hydrateRun(agentId);
+  }, [agentId]);
 
   const send = useCallback(
     async (text: string, attachment: Attachment | null = null) => {
       const trimmed = text.trim();
-      if (!agent || busy) return;
+      if (!agent) return;
+      const id = agent.id;
+      // Read straight from the store: the captured render's `busy` can be stale
+      // if the user was on another agent when this run started.
+      if (getRun(id).busy) return;
       if (!trimmed && !attachment) return;
+
+      const setMessages = messageWriter(id);
+      const setError = errorWriter(id);
       setError(null);
 
       // Slash commands: this chat runs on the Agent SDK, not the CLI REPL, so slash
@@ -140,12 +176,12 @@ export function useChatSession(agent: Agent | null, visible = true) {
       if (trimmed.startsWith("/") && !attachment) {
         const parsed = parseSlash(trimmed);
         if (parsed?.name === "clear") {
-          setMessages([]);
-          clearSnapshot(agent.id);
+          resetRun(id);
+          clearSnapshot(id);
           return;
         }
         if (!parsed || parsed.name === "help") {
-          const names = await fetchCustomCommandNames(agent.id);
+          const names = await fetchCustomCommandNames(id);
           const echo: ChatMessage = { id: rand(), role: "user", text: trimmed };
           const out: ChatMessage = {
             id: rand(),
@@ -160,7 +196,7 @@ export function useChatSession(agent: Agent | null, visible = true) {
           const echo: ChatMessage = { id: rand(), role: "user", text: trimmed };
           let out: ChatMessage;
           if (!parsed.args) {
-            const cur = await fetchAgentModel(agent.id);
+            const cur = await fetchAgentModel(id);
             out = {
               id: rand(),
               role: "assistant",
@@ -171,7 +207,7 @@ export function useChatSession(agent: Agent | null, visible = true) {
                 `Takes effect on the next message/session.`,
             };
           } else {
-            const r = await setAgentModel(agent.id, parsed.args);
+            const r = await setAgentModel(id, parsed.args);
             out = {
               id: rand(),
               role: "assistant",
@@ -184,7 +220,7 @@ export function useChatSession(agent: Agent | null, visible = true) {
           setMessages((m) => [...m, echo, out]);
           return;
         }
-        const cmdBody = await fetchCustomCommand(agent.id, parsed.name);
+        const cmdBody = await fetchCustomCommand(id, parsed.name);
         if (cmdBody == null) {
           const echo: ChatMessage = { id: rand(), role: "user", text: trimmed };
           const out: ChatMessage = {
@@ -207,16 +243,17 @@ export function useChatSession(agent: Agent | null, visible = true) {
       };
       const asstId = rand();
       const asstMsg: ChatMessage = { id: asstId, role: "assistant", text: "", streaming: true };
-      currentAsstIdRef.current = asstId;
-      setMessages((m) => [...m, userMsg, asstMsg]);
-      setBusy(true);
+      asstRef(id).current = asstId;
+      updateRun(id, (s) => ({ ...s, messages: [...s.messages, userMsg, asstMsg], busy: true }));
+
+      const dispatch = makeDispatch(id, agent.name ?? null);
       const ac = new AbortController();
-      abortRef.current = ac;
+      setAbort(id, ac);
       try {
         const body: Record<string, unknown> = {
-          agent_id: agent.id,
+          agent_id: id,
           message: messageToSend,
-          session_id: sessionId,
+          session_id: getRun(id).sessionId,
         };
         if (attachment) body.attachment = attachment;
         const res = await fetch("/api/chat/send", {
@@ -225,33 +262,50 @@ export function useChatSession(agent: Agent | null, visible = true) {
           body: JSON.stringify(body),
           signal: ac.signal,
         });
-        await streamSse(res, dispatchEvent);
+        await streamSse(res, dispatch);
       } catch (e: unknown) {
         if (!(e instanceof Error && e.name === "AbortError")) {
           setError(e instanceof Error ? e.message : String(e));
         }
       } finally {
-        setBusy(false);
-        currentAsstIdRef.current = null;
-        setMessages((arr) => arr.map((x) => (x.streaming ? { ...x, streaming: false, done: true } : x)));
-        abortRef.current = null;
+        asstRef(id).current = null;
+        setAbort(id, null);
+        updateRun(id, (s) => ({
+          ...s,
+          busy: false,
+          messages: s.messages.map((x) =>
+            x.streaming ? { ...x, streaming: false, done: true } : x
+          ),
+        }));
       }
     },
-    [agent, sessionId, busy, dispatchEvent]
+    [agent]
   );
 
-  const cancel = useCallback(() => abortRef.current?.abort(), []);
+  const cancel = useCallback(() => {
+    if (agentId) abortRun(agentId);
+  }, [agentId]);
 
   const decide = useCallback(
-    (toolUseId: string, decision: "allow" | "deny", always?: boolean) =>
-      postDecide(toolUseId, decision, always, setMessages, setError),
-    []
+    (toolUseId: string, decision: "allow" | "deny", always?: boolean) => {
+      if (!agentId) return;
+      return postDecide(
+        toolUseId,
+        decision,
+        always,
+        messageWriter(agentId),
+        errorWriter(agentId)
+      );
+    },
+    [agentId]
   );
 
   const answer = useCallback(
-    (toolUseId: string, answers: Record<string, string>) =>
-      postAnswer(toolUseId, answers, setMessages, setError),
-    []
+    (toolUseId: string, answers: Record<string, string>) => {
+      if (!agentId) return;
+      return postAnswer(toolUseId, answers, messageWriter(agentId), errorWriter(agentId));
+    },
+    [agentId]
   );
 
   // Track the pending permission card and the pending single-question card in refs,
@@ -265,6 +319,11 @@ export function useChatSession(agent: Agent | null, visible = true) {
     question: string;
     options: string[];
   } | null>(null);
+  const visibleRef = useRef(visible);
+  useEffect(() => {
+    visibleRef.current = visible;
+  }, [visible]);
+
   useEffect(() => {
     const perm = messages.find(
       (m) => m.role === "permission" && m.permission?.status === "pending"
@@ -287,7 +346,7 @@ export function useChatSession(agent: Agent | null, visible = true) {
   // Keyboard shortcuts mirroring the CLI's numbered prompt so a card can be answered
   // without the mouse. Permission card: 1 = Allow, 2 = Reject, 3 = Allow always.
   // Single-question card: 1..N picks that option and submits. Permission takes
-  // priority if both are somehow pending. Yields while the user is composing a message.
+  // priority if both are somehow pending.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (
@@ -353,13 +412,10 @@ export function useChatSession(agent: Agent | null, visible = true) {
   }, [needsYou, agent?.name]);
 
   const clear = useCallback(() => {
-    setMessages([]);
-    setSessionId(null);
-    setLastTurn(null);
-    setStats(EMPTY_STATS);
-    setError(null);
-    if (agent) clearSnapshot(agent.id);
-  }, [agent]);
+    if (!agentId) return;
+    resetRun(agentId);
+    clearSnapshot(agentId);
+  }, [agentId]);
 
   return { messages, sessionId, lastTurn, stats, busy, error, send, cancel, clear, decide, answer };
 }
