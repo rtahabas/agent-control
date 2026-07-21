@@ -28,6 +28,32 @@ const sessionAllowlists = (globalForChatPermissions.__chatSessionAllowlists ??= 
   Set<string>
 >());
 
+/**
+ * How many sessions may hold auto-allows at once.
+ *
+ * These Maps are pinned to the process lifetime, and a session is only removed
+ * when the user revokes it by hand — nothing prunes the session you simply
+ * stopped using, and `/clear` starts a new one. Grants are what let a tool run
+ * without asking, so an unbounded pile of them is worth capping on principle
+ * even at this size: the oldest session loses its grants and gets asked again,
+ * which is the safe direction to fail.
+ */
+const MAX_ALLOWLISTED_SESSIONS = 32;
+
+function rememberAllow(sessionId: string, toolName: string) {
+  let set = sessionAllowlists.get(sessionId);
+  if (!set) {
+    // Re-insert so this session counts as the most recent.
+    if (sessionAllowlists.size >= MAX_ALLOWLISTED_SESSIONS) {
+      const oldest = sessionAllowlists.keys().next();
+      if (!oldest.done) sessionAllowlists.delete(oldest.value);
+    }
+    set = new Set();
+    sessionAllowlists.set(sessionId, set);
+  }
+  set.add(toolName);
+}
+
 export function answerQuestion(toolUseId: string, answers: Record<string, string>): boolean {
   const resolve = pendingQuestions.get(toolUseId);
   if (!resolve) return false;
@@ -45,14 +71,7 @@ export function decidePermission(
   if (!p) return false;
   pending.delete(toolUseId);
   if (decision === "allow") {
-    if (always && p.sessionId) {
-      let set = sessionAllowlists.get(p.sessionId);
-      if (!set) {
-        set = new Set();
-        sessionAllowlists.set(p.sessionId, set);
-      }
-      set.add(p.toolName);
-    }
+    if (always && p.sessionId) rememberAllow(p.sessionId, p.toolName);
     p.resolve({ behavior: "allow", updatedInput: {} } as PermissionResult);
   } else {
     p.resolve({ behavior: "deny", message: "denied by user", interrupt: false });
