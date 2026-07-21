@@ -74,8 +74,16 @@ export async function spawnClaude({
       cwd,
       abortController: ac,
       includePartialMessages: true,
+      // Hard cap on agentic turns so a runaway / autonomous (heartbeat/loop-style)
+      // agent can't exhaust memory on a small box. Tune via CHAT_MAX_TURNS.
+      maxTurns: Number(process.env.CHAT_MAX_TURNS) || 20,
       ...(sessionId && /^[a-f0-9-]{8,}$/.test(sessionId) ? { resume: sessionId } : {}),
-      canUseTool: makeCanUseTool(emit, () => activeSessionId),
+      // Default: surface every tool call as an Allow/Reject permission card in the
+      // UI (answerable by mouse or the 1/2/3 keyboard shortcut). Set
+      // CHAT_BYPASS_PERMISSION=1 for an unattended/demo run that streams without prompts.
+      ...(process.env.CHAT_BYPASS_PERMISSION === "1"
+        ? { permissionMode: "bypassPermissions" as const }
+        : { canUseTool: makeCanUseTool(emit, () => activeSessionId) }),
     },
   });
 
