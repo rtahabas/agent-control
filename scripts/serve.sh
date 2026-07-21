@@ -27,4 +27,5 @@ if [ "${1:-}" != "--no-build" ]; then
 fi
 
 echo "> serving on port $PORT  (Ctrl+C to stop)"
-exec npx next start -p "$PORT"
+# Loopback only: this panel drives agents, and nothing here asks who you are.
+exec npx next start -p "$PORT" -H "${HOST:-127.0.0.1}"
