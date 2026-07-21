@@ -36,6 +36,7 @@ import {
 } from "@/lib/chat-dispatch";
 import { streamSse } from "@/lib/chat-stream-reader";
 import { postAnswer, postDecide } from "@/lib/chat-actions";
+import { keyToPermDecision, keyToOptionIndex, isComposing } from "@/lib/perm-keys";
 
 export function useChatSession(agent: Agent | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -211,6 +212,66 @@ export function useChatSession(agent: Agent | null) {
       postAnswer(toolUseId, answers, setMessages, setError),
     []
   );
+
+  // Track the pending permission card and the pending single-question card in refs,
+  // so the keydown listener stays stable instead of re-binding on every message.
+  // The question shortcut is only offered when there is exactly ONE question — with
+  // multiple questions a bare digit is ambiguous (which question?), so we fall back
+  // to clicking there.
+  const pendingPermRef = useRef<string | null>(null);
+  const pendingQuestionRef = useRef<{
+    toolUseId: string;
+    question: string;
+    options: string[];
+  } | null>(null);
+  useEffect(() => {
+    const perm = messages.find(
+      (m) => m.role === "permission" && m.permission?.status === "pending"
+    );
+    pendingPermRef.current = perm?.permission?.tool_use_id ?? null;
+
+    const q = messages.find(
+      (m) => m.role === "question" && m.question?.status === "pending"
+    )?.question;
+    pendingQuestionRef.current =
+      q && q.questions.length === 1
+        ? {
+            toolUseId: q.tool_use_id,
+            question: q.questions[0].question,
+            options: q.questions[0].options.map((o) => o.label),
+          }
+        : null;
+  }, [messages]);
+
+  // Keyboard shortcuts mirroring the CLI's numbered prompt so a card can be answered
+  // without the mouse. Permission card: 1 = Allow, 2 = Reject, 3 = Allow always.
+  // Single-question card: 1..N picks that option and submits. Permission takes
+  // priority if both are somehow pending. Yields while the user is composing a message.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isComposing(document.activeElement)) return;
+
+      const permId = pendingPermRef.current;
+      if (permId) {
+        const mapped = keyToPermDecision(e.key);
+        if (!mapped) return;
+        e.preventDefault();
+        decide(permId, mapped.decision, mapped.always);
+        return;
+      }
+
+      const q = pendingQuestionRef.current;
+      if (q) {
+        const idx = keyToOptionIndex(e.key, q.options.length);
+        if (idx === null) return;
+        e.preventDefault();
+        answer(q.toolUseId, { [q.question]: q.options[idx] });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [decide, answer]);
 
   const clear = useCallback(() => {
     setMessages([]);

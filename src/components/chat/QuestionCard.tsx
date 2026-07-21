@@ -36,6 +36,7 @@ export function QuestionCard({
                 pending && setDraft((d) => ({ ...d, [q.question]: label }))
               }
               pending={pending}
+              numbered={pending && req.questions.length === 1}
             />
           ))}
         </div>
@@ -70,18 +71,19 @@ function Header({ count, pending }: { count: number; pending: boolean }) {
 }
 
 function Question({
-  q, selected, onSelect, pending,
+  q, selected, onSelect, pending, numbered,
 }: {
   q: QuestionItem;
   selected: string | undefined;
   onSelect: (label: string) => void;
   pending: boolean;
+  numbered: boolean;
 }) {
   return (
     <div className="px-3 py-3 space-y-2">
       <div className="text-xs font-medium text-zinc-900">{q.question}</div>
       <div className="flex flex-wrap gap-1.5">
-        {q.options.map((opt) => {
+        {q.options.map((opt, i) => {
           const isSelected = selected === opt.label;
           return (
             <button
@@ -96,6 +98,11 @@ function Question({
                   : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-400 disabled:opacity-60"
               }`}
             >
+              {numbered && i < 9 && (
+                <kbd className="mr-1.5 px-1 rounded bg-black/15 mono text-[10px] leading-none py-0.5">
+                  {i + 1}
+                </kbd>
+              )}
               {opt.label}
             </button>
           );

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { PermissionRequest } from "@/lib/chat-types";
 import { toolPreview } from "@/lib/tool-preview";
 
@@ -41,6 +42,14 @@ export function PermissionCard({
   );
 }
 
+function Key({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="mr-1.5 px-1 rounded bg-black/15 mono text-[10px] leading-none py-0.5">
+      {children}
+    </kbd>
+  );
+}
+
 function Actions({ toolUseId, onDecide }: { toolUseId: string; onDecide?: DecideFn }) {
   return (
     <div className="px-3 py-2 flex flex-wrap gap-2 text-xs">
@@ -48,19 +57,19 @@ function Actions({ toolUseId, onDecide }: { toolUseId: string; onDecide?: Decide
         onClick={() => onDecide?.(toolUseId, "allow", false)}
         className="px-3 py-1.5 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700"
       >
-        Allow
-      </button>
-      <button
-        onClick={() => onDecide?.(toolUseId, "allow", true)}
-        className="px-3 py-1.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium hover:bg-emerald-100"
-      >
-        Allow always
+        <Key>1</Key>Allow
       </button>
       <button
         onClick={() => onDecide?.(toolUseId, "deny", false)}
         className="px-3 py-1.5 rounded-md bg-rose-600 text-white font-medium hover:bg-rose-700"
       >
-        Reject
+        <Key>2</Key>Reject
+      </button>
+      <button
+        onClick={() => onDecide?.(toolUseId, "allow", true)}
+        className="px-3 py-1.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium hover:bg-emerald-100"
+      >
+        <Key>3</Key>Allow always
       </button>
     </div>
   );
