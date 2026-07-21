@@ -1,0 +1,39 @@
+# Every gate this project has was previously run by hand, which means it was run
+# when someone remembered. These are the same commands, run for us.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # better-sqlite3 is a native module; ci builds it from the lockfile.
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Typecheck tests
+        run: npm run typecheck:test
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      # Last, and separately: a build failure after green tests means something
+      # only the production compile sees, and the log should say which.
+      - name: Build
+        run: npm run build

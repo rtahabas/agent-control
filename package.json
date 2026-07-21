@@ -13,7 +13,10 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck:test": "tsc --noEmit -p tsconfig.test.json"
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run lint && npm run typecheck && npm run typecheck:test && npm run test:unit"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.137",
@@ -39,6 +42,8 @@
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitest/coverage-v8": "^4.1.6",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.2.10",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
