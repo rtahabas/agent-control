@@ -39,6 +39,7 @@ import { postAnswer, postDecide } from "@/lib/chat-actions";
 import { keyToPermDecision, keyToOptionIndex, isComposing } from "@/lib/perm-keys";
 import { attentionTitle, BASE_TITLE } from "@/lib/attention";
 import { runEndedMessage } from "@/lib/run-outcome";
+import { runNotification, showNotice } from "@/lib/run-notify";
 
 export function useChatSession(agent: Agent | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -51,6 +52,10 @@ export function useChatSession(agent: Agent | null) {
   const statsRef = useRef<CumulativeStats>(EMPTY_STATS);
   const currentAsstIdRef = useRef<string | null>(null);
   useEffect(() => { statsRef.current = stats; }, [stats]);
+  // dispatchEvent is deliberately dep-free so the SSE reader never re-binds mid-run;
+  // it reads the agent name through this mirror instead of closing over a stale one.
+  const agentNameRef = useRef<string | null>(null);
+  useEffect(() => { agentNameRef.current = agent?.name ?? null; }, [agent?.name]);
 
   useEffect(() => {
     if (!agent) return;
@@ -92,6 +97,23 @@ export function useChatSession(agent: Agent | null) {
         payload.errors as string[] | null
       );
       if (ended) setError(ended);
+      // Tell the user a long run is over when they are not looking at the tab.
+      // Hooked to `done` rather than a busy transition on purpose: a run the user
+      // cancelled never emits `done`, and they already know they cancelled it.
+      if (document.hidden) {
+        showNotice(
+          runNotification(
+            {
+              subtype: payload.subtype as string | null,
+              numTurns: (payload.num_turns as number | null) ?? t.num_turns,
+              errors: payload.errors as string[] | null,
+              costUsd: t.cost_usd,
+              durationMs: t.duration_ms,
+            },
+            agentNameRef.current
+          )
+        );
+      }
     } else if (event === "error" && typeof payload.message === "string") setError(payload.message);
   }, []);
 
@@ -307,8 +329,8 @@ export function useChatSession(agent: Agent | null) {
     }
     if (notifiedRef.current || !document.hidden) return;
     notifiedRef.current = true;
-    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-    new Notification(`${agent?.name ?? "Agent"} needs you`, {
+    showNotice({
+      title: `${agent?.name ?? "Agent"} needs you`,
       body: "A permission or question is waiting in the chat.",
     });
   }, [needsYou, agent?.name]);
