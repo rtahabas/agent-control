@@ -37,6 +37,7 @@ import {
 import { streamSse } from "@/lib/chat-stream-reader";
 import { postAnswer, postDecide } from "@/lib/chat-actions";
 import { keyToPermDecision, keyToOptionIndex, isComposing } from "@/lib/perm-keys";
+import { attentionTitle, BASE_TITLE } from "@/lib/attention";
 
 export function useChatSession(agent: Agent | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -272,6 +273,36 @@ export function useChatSession(agent: Agent | null) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [decide, answer]);
+
+  // Attention signal. A pending card blocks the agent until it is answered, so
+  // surface that in the browser tab — otherwise it goes unnoticed while you are
+  // in another tab (or driving a second agent).
+  const needsYou = messages.some(
+    (m) =>
+      (m.role === "permission" && m.permission?.status === "pending") ||
+      (m.role === "question" && m.question?.status === "pending")
+  );
+  useEffect(() => {
+    document.title = attentionTitle({ needsYou, busy }, agent?.name ?? null);
+  }, [needsYou, busy, agent?.name]);
+  // Restore the plain title once, on unmount — not on every state change.
+  useEffect(() => () => void (document.title = BASE_TITLE), []);
+
+  // Desktop notification when a card appears while the tab is hidden. Fires only
+  // if permission was already granted — this never prompts on its own.
+  const notifiedRef = useRef(false);
+  useEffect(() => {
+    if (!needsYou) {
+      notifiedRef.current = false;
+      return;
+    }
+    if (notifiedRef.current || !document.hidden) return;
+    notifiedRef.current = true;
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    new Notification(`${agent?.name ?? "Agent"} needs you`, {
+      body: "A permission or question is waiting in the chat.",
+    });
+  }, [needsYou, agent?.name]);
 
   const clear = useCallback(() => {
     setMessages([]);
