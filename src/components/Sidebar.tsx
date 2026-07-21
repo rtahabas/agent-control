@@ -2,15 +2,17 @@
 
 import type { Agent } from "@/lib/api";
 import { NAV, PINNED_TOP, type Tab } from "@/lib/tabs";
+import { AgentRoster } from "@/components/AgentRoster";
 
 interface Props {
   tab: Tab;
   onTabChange: (t: Tab) => void;
   selectedAgent: Agent | null;
-  agentCount: number;
+  agents: Agent[];
+  onSelectAgent: (id: string) => void;
 }
 
-export function Sidebar({ tab, onTabChange, selectedAgent, agentCount }: Props) {
+export function Sidebar({ tab, onTabChange, selectedAgent, agents, onSelectAgent }: Props) {
   return (
     <aside className="w-60 shrink-0 border-r border-zinc-200 bg-white flex flex-col">
       <div className="px-5 py-4 border-b border-zinc-200">
@@ -67,25 +69,11 @@ export function Sidebar({ tab, onTabChange, selectedAgent, agentCount }: Props) 
           </div>
         ))}
       </nav>
-      <div className="border-t border-zinc-200 px-5 py-3">
-        <div className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">
-          Active agent
-        </div>
-        {selectedAgent ? (
-          <div>
-            <div className="text-sm font-medium text-zinc-900 truncate">
-              {selectedAgent.name}
-            </div>
-            <div className="text-[11px] text-zinc-500 mono truncate">
-              {selectedAgent.id}
-            </div>
-          </div>
-        ) : (
-          <div className="text-xs text-zinc-400">
-            {agentCount === 0 ? "No agents — open Agents to add" : "Pick one in Agents"}
-          </div>
-        )}
-      </div>
+      <AgentRoster
+        agents={agents}
+        selectedId={selectedAgent?.id ?? null}
+        onSelect={onSelectAgent}
+      />
     </aside>
   );
 }

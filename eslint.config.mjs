@@ -19,6 +19,18 @@ export default defineConfig([
        * bites when something real appears.
        */
       "react-hooks/exhaustive-deps": "error",
+
+      /**
+       * A file past this length has usually stopped being one thing. Nine files
+       * were already over when the rule arrived, none of them written for this
+       * budget, so it starts as a warning rather than a wall — promote it once
+       * that list is empty. Comments and blanks do not count: the target is
+       * how much a file does, not how much it explains.
+       */
+      "max-lines": [
+        "warn",
+        { max: 150, skipBlankLines: true, skipComments: true },
+      ],
       /**
        * Every page here loads its data on mount and puts it in state. React now
        * argues against that shape, and the argument has merit — but it is the
@@ -35,5 +47,11 @@ export default defineConfig([
     // known source it can optimise, which a data URL is not.
     files: ["src/components/chat/**"],
     rules: { "@next/next/no-img-element": "off" },
+  },
+  {
+    // A long test file is usually many cases against one unit, which is the
+    // shape we want; splitting it to satisfy a line budget scatters them.
+    files: ["src/__tests__/**"],
+    rules: { "max-lines": "off" },
   },
 ]);

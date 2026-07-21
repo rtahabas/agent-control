@@ -30,8 +30,18 @@ export const EMPTY_RUN: RunState = {
   error: null,
 };
 
+/** What one agent needs from you, without opening its transcript. */
+export type AgentAttention = {
+  /** A permission or question card is waiting — the agent is blocked until answered. */
+  needsYou: boolean;
+  /** A turn is in flight. */
+  busy: boolean;
+};
+
 const states = new Map<string, RunState>();
 const listeners = new Map<string, Set<() => void>>();
+/** Watchers of every agent at once, for surfaces that show them side by side. */
+const anyListeners = new Set<() => void>();
 const hydrated = new Set<string>();
 const storageWarned = new Set<string>();
 
@@ -59,6 +69,50 @@ export function subscribeRun(agentId: string, cb: () => void): () => void {
   };
 }
 
+/** Subscribes to any agent changing, for the sidebar and the tab title. */
+export function subscribeAny(cb: () => void): () => void {
+  anyListeners.add(cb);
+  return () => {
+    anyListeners.delete(cb);
+  };
+}
+
+/** True when a card is blocking this agent until somebody answers it. */
+export function hasPendingCard(messages: ChatMessage[]): boolean {
+  return messages.some(
+    (m) =>
+      (m.role === "permission" && m.permission?.status === "pending") ||
+      (m.role === "question" && m.question?.status === "pending")
+  );
+}
+
+let revision = 0;
+let attentionCache: { revision: number; value: Record<string, AgentAttention> } | null = null;
+
+/**
+ * Attention for every agent at once.
+ *
+ * Read during render by useSyncExternalStore, which compares by identity — so
+ * this has to hand back the same object until something actually changes, or
+ * the component would re-render forever. Recomputed on the revision counter,
+ * which only moves when a run does.
+ */
+export function getAttention(): Record<string, AgentAttention> {
+  if (attentionCache && attentionCache.revision === revision) return attentionCache.value;
+  const value: Record<string, AgentAttention> = {};
+  for (const [id, s] of states) {
+    value[id] = { needsYou: hasPendingCard(s.messages), busy: s.busy };
+  }
+  attentionCache = { revision, value };
+  return value;
+}
+
+function notify(agentId: string) {
+  revision += 1;
+  listeners.get(agentId)?.forEach((cb) => cb());
+  anyListeners.forEach((cb) => cb());
+}
+
 export function updateRun(agentId: string, updater: (s: RunState) => RunState) {
   let next = updater(getRun(agentId));
   const saved = saveSnapshot(agentId, {
@@ -78,7 +132,7 @@ export function updateRun(agentId: string, updater: (s: RunState) => RunState) {
     };
   }
   states.set(agentId, next);
-  listeners.get(agentId)?.forEach((cb) => cb());
+  notify(agentId);
 }
 
 /**
@@ -98,7 +152,7 @@ export function hydrateRun(agentId: string) {
     lastTurn: snap.lastTurn ?? null,
     stats: snap.stats || EMPTY_STATS,
   });
-  listeners.get(agentId)?.forEach((cb) => cb());
+  notify(agentId);
 }
 
 /** Wipes an agent's transcript and session, leaving a run in flight untouched. */
@@ -129,8 +183,11 @@ export function asstRef(agentId: string): { current: string | null } {
 export function __resetStore() {
   states.clear();
   listeners.clear();
+  anyListeners.clear();
   hydrated.clear();
   storageWarned.clear();
   aborts.clear();
   asstRefs.clear();
+  revision += 1;
+  attentionCache = null;
 }

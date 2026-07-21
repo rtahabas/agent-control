@@ -9,7 +9,7 @@ import {
   subscribeRun,
   updateRun,
 } from "@/lib/chat-store";
-import { makeDispatch } from "@/lib/use-chat-session";
+import { makeDispatch } from "@/lib/chat-run-dispatch";
 
 const A = "agent-a";
 const B = "agent-b";
