@@ -110,13 +110,26 @@ export async function spawnClaude({
 }
 
 function emitDone(msg: Record<string, unknown>, emit: EmitFn) {
-  const usage = msg.subtype === "success" ? (msg.usage as Record<string, number>) : null;
-  const modelUsage = msg.subtype === "success"
-    ? (msg.modelUsage as Record<string, { contextWindow?: number }> | null)
-    : null;
+  emit("done", doneEventPayload(msg));
+}
+
+/**
+ * Flattens an SDK result message into the `done` event.
+ *
+ * Both result shapes carry usage/cost/stop_reason — only the error ones lack
+ * `result` text (SDKResultSuccess | SDKResultError). Reading them regardless of
+ * subtype keeps a capped or failed turn from reporting zero spend, and forwards
+ * the subtype so the UI can say why a run stopped instead of just going quiet
+ * (e.g. error_max_turns from the CHAT_MAX_TURNS cap).
+ */
+export function doneEventPayload(msg: Record<string, unknown>) {
+  const usage = msg.usage as Record<string, number> | undefined;
+  const modelUsage = msg.modelUsage as Record<string, { contextWindow?: number }> | null;
   const modelKey = modelUsage ? Object.keys(modelUsage)[0] : null;
-  emit("done", {
-    reason: msg.subtype === "success" ? msg.stop_reason : null,
+  return {
+    subtype: typeof msg.subtype === "string" ? msg.subtype : null,
+    errors: Array.isArray(msg.errors) ? (msg.errors as string[]) : null,
+    reason: (msg.stop_reason as string | null) ?? null,
     duration_ms: msg.duration_ms,
     duration_api_ms: msg.duration_api_ms,
     num_turns: msg.num_turns,
@@ -131,7 +144,7 @@ function emitDone(msg: Record<string, unknown>, emit: EmitFn) {
         }
       : null,
     context_window: modelKey && modelUsage ? modelUsage[modelKey].contextWindow ?? null : null,
-  });
+  };
 }
 
 function handleStreamEvent(

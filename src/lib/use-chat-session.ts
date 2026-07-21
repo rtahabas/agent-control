@@ -38,6 +38,7 @@ import { streamSse } from "@/lib/chat-stream-reader";
 import { postAnswer, postDecide } from "@/lib/chat-actions";
 import { keyToPermDecision, keyToOptionIndex, isComposing } from "@/lib/perm-keys";
 import { attentionTitle, BASE_TITLE } from "@/lib/attention";
+import { runEndedMessage } from "@/lib/run-outcome";
 
 export function useChatSession(agent: Agent | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -83,6 +84,14 @@ export function useChatSession(agent: Agent | null) {
       setStats((s) => accumulate(s, t));
       setBusy(false);
       setMessages((arr) => arr.map((x) => (x.streaming ? { ...x, streaming: false, done: true } : x)));
+      // A run can end without an error event — hitting the turn or cost cap
+      // just stops. Say so, otherwise the agent looks like it quit for no reason.
+      const ended = runEndedMessage(
+        payload.subtype as string | null,
+        payload.num_turns as number | null,
+        payload.errors as string[] | null
+      );
+      if (ended) setError(ended);
     } else if (event === "error" && typeof payload.message === "string") setError(payload.message);
   }, []);
 
