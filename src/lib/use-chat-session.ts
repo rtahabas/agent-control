@@ -31,6 +31,7 @@ import {
   applyPermissionRequest,
   applyToolEnd,
   applyToolStart,
+  settleOpenCards,
   type DispatchCtx,
 } from "@/lib/chat-dispatch";
 import { streamSse } from "@/lib/chat-stream-reader";
@@ -273,8 +274,8 @@ export function useChatSession(agent: Agent | null, visible = true) {
         updateRun(id, (s) => ({
           ...s,
           busy: false,
-          messages: s.messages.map((x) =>
-            x.streaming ? { ...x, streaming: false, done: true } : x
+          messages: settleOpenCards(
+            s.messages.map((x) => (x.streaming ? { ...x, streaming: false, done: true } : x))
           ),
         }));
       }

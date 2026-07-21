@@ -101,3 +101,23 @@ export function applyAskUserQuestion(payload: Record<string, unknown>, ctx: Disp
   };
   ctx.setMessages((arr) => insertAfterAsst(arr, asstId, msg));
 }
+
+/**
+ * Settles cards left open when a run ends — cancelled, errored, or simply over.
+ *
+ * A permission or question card renders live buttons purely from its "pending"
+ * status. Once the stream is gone nothing is listening, so those buttons promise
+ * an answer that can no longer be delivered: the user clicks Allow and the run
+ * has already been torn down. Marking them expired says so.
+ */
+export function settleOpenCards(arr: ChatMessage[]): ChatMessage[] {
+  return arr.map((m) => {
+    if (m.role === "permission" && m.permission?.status === "pending") {
+      return { ...m, permission: { ...m.permission, status: "expired" as const } };
+    }
+    if (m.role === "question" && m.question?.status === "pending") {
+      return { ...m, question: { ...m.question, status: "expired" as const } };
+    }
+    return m;
+  });
+}

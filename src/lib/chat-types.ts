@@ -85,7 +85,8 @@ export interface QuestionItem {
   options: QuestionOption[];
 }
 
-export type QuestionStatus = "pending" | "answered";
+/** "expired" — the run ended before it was answered, so it never can be. */
+export type QuestionStatus = "pending" | "answered" | "expired";
 
 export interface QuestionRequest {
   tool_use_id: string;

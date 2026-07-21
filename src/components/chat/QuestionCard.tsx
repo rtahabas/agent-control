@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { QuestionRequest, QuestionItem } from "@/lib/chat-types";
+import type { QuestionRequest, QuestionItem, QuestionStatus } from "@/lib/chat-types";
 
 type AnswerFn = (toolUseId: string, answers: Record<string, string>) => void;
 
@@ -25,7 +25,7 @@ export function QuestionCard({
   return (
     <div className="flex justify-start">
       <div className="max-w-[80%] w-full border rounded-lg bg-white border-blue-200 overflow-hidden">
-        <Header count={req.questions.length} pending={pending} />
+        <Header count={req.questions.length} status={req.status} />
         <div className="divide-y divide-zinc-100">
           {req.questions.map((q, i) => (
             <Question
@@ -57,11 +57,18 @@ export function QuestionCard({
   );
 }
 
-function Header({ count, pending }: { count: number; pending: boolean }) {
+function Header({ count, status }: { count: number; status: QuestionStatus }) {
+  // "expired" must not read as "Answered" — nobody answered it, the run ended.
+  const label =
+    status === "pending"
+      ? "Question for you"
+      : status === "answered"
+        ? "Answered"
+        : "Unanswered · the run ended";
   return (
     <div className="px-3 py-2 bg-blue-50 border-b border-blue-200 flex items-center gap-2 text-xs">
       <span className="font-medium text-blue-900">
-        {pending ? "Question for you" : "Answered"}
+        {label}
       </span>
       <span className="mono text-zinc-500 ml-auto">
         {count} item{count === 1 ? "" : "s"}
