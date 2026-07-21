@@ -36,12 +36,17 @@ import {
 } from "@/lib/chat-dispatch";
 import { streamSse } from "@/lib/chat-stream-reader";
 import { postAnswer, postDecide } from "@/lib/chat-actions";
-import { keyToPermDecision, keyToOptionIndex, isComposing } from "@/lib/perm-keys";
+import { keyToPermDecision, keyToOptionIndex, shortcutAllowed } from "@/lib/perm-keys";
 import { attentionTitle, BASE_TITLE } from "@/lib/attention";
 import { runEndedMessage } from "@/lib/run-outcome";
 import { runNotification, showNotice } from "@/lib/run-notify";
 
-export function useChatSession(agent: Agent | null) {
+/**
+ * @param visible whether the chat surface is the tab on screen. The panel stays
+ * mounted behind other tabs so a run keeps streaming, which means keyboard
+ * shortcuts have to be told what is actually being looked at.
+ */
+export function useChatSession(agent: Agent | null, visible = true) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [lastTurn, setLastTurn] = useState<TurnInfo | null>(null);
@@ -56,6 +61,10 @@ export function useChatSession(agent: Agent | null) {
   // it reads the agent name through this mirror instead of closing over a stale one.
   const agentNameRef = useRef<string | null>(null);
   useEffect(() => { agentNameRef.current = agent?.name ?? null; }, [agent?.name]);
+  // Same reason: the keydown listener is bound once and reads visibility here
+  // rather than re-binding every time the user changes tabs.
+  const visibleRef = useRef(visible);
+  useEffect(() => { visibleRef.current = visible; }, [visible]);
 
   useEffect(() => {
     if (!agent) return;
@@ -281,8 +290,16 @@ export function useChatSession(agent: Agent | null) {
   // priority if both are somehow pending. Yields while the user is composing a message.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (isComposing(document.activeElement)) return;
+      if (
+        !shortcutAllowed({
+          chatVisible: visibleRef.current,
+          documentHidden: document.hidden,
+          target: document.activeElement,
+          modifiers: { meta: e.metaKey, ctrl: e.ctrlKey, alt: e.altKey },
+        })
+      ) {
+        return;
+      }
 
       const permId = pendingPermRef.current;
       if (permId) {

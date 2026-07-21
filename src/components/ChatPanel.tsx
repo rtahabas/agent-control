@@ -10,8 +10,8 @@ import { NotifyToggle } from "@/components/chat/NotifyToggle";
 import { AllowlistChip } from "@/components/chat/AllowlistChip";
 import { useChatSession } from "@/lib/use-chat-session";
 
-export function ChatPanel({ agent }: { agent: Agent | null }) {
-  const session = useChatSession(agent);
+export function ChatPanel({ agent, visible = true }: { agent: Agent | null; visible?: boolean }) {
+  const session = useChatSession(agent, visible);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

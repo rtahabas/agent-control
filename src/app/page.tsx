@@ -142,7 +142,9 @@ export default function Home() {
             />
           </div>
           <div className={`absolute inset-0 ${tab === "chat" ? "" : "hidden"}`}>
-            <ChatPanel agent={selectedAgent} />
+            {/* Mounted behind other tabs on purpose so a run keeps streaming —
+                hence `visible`, which tells it whether anyone is looking. */}
+            <ChatPanel agent={selectedAgent} visible={tab === "chat"} />
           </div>
         </div>
       </main>

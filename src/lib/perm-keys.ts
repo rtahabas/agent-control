@@ -49,3 +49,30 @@ export function isComposing(el: Element | null): boolean {
   const value = (el as HTMLInputElement | HTMLTextAreaElement).value;
   return typeof value === "string" && value.trim().length > 0;
 }
+
+export type ShortcutContext = {
+  /** The chat surface is the tab currently on screen. */
+  chatVisible: boolean;
+  /** The browser tab itself is backgrounded. */
+  documentHidden: boolean;
+  /** Element with keyboard focus when the key was pressed. */
+  target: Element | null;
+  modifiers: { meta: boolean; ctrl: boolean; alt: boolean };
+};
+
+/**
+ * Whether a bare number key may act on a pending card.
+ *
+ * The card is the whole justification for the shortcut: answering something you
+ * cannot see is not a shortcut, it is an accident. The chat panel stays mounted
+ * behind other tabs, so being mounted proves nothing about being visible — a "1"
+ * typed on the Overview tab must not grant a tool, and "3" must not write a
+ * lasting allowlist entry. Composing still yields, so typing "1" into a draft
+ * never decides anything, while an empty composer keeps the shortcut usable.
+ */
+export function shortcutAllowed(ctx: ShortcutContext): boolean {
+  const { meta, ctrl, alt } = ctx.modifiers;
+  if (meta || ctrl || alt) return false;
+  if (!ctx.chatVisible || ctx.documentHidden) return false;
+  return !isComposing(ctx.target);
+}

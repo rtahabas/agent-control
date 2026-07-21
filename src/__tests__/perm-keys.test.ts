@@ -4,6 +4,7 @@ import {
   keyToOptionIndex,
   isTypingTarget,
   isComposing,
+  shortcutAllowed,
 } from "@/lib/perm-keys";
 
 describe("keyToPermDecision", () => {
@@ -72,5 +73,47 @@ describe("isComposing", () => {
   it("is false for a non-typing element", () => {
     expect(isComposing(document.createElement("button"))).toBe(false);
     expect(isComposing(null)).toBe(false);
+  });
+});
+
+describe("shortcutAllowed", () => {
+  const NO_MODS = { meta: false, ctrl: false, alt: false };
+  const base = {
+    chatVisible: true,
+    documentHidden: false,
+    target: null as Element | null,
+    modifiers: NO_MODS,
+  };
+  // Minimal stand-in for a focused field; isComposing only reads tagName/value.
+  const field = (value: string) => ({ tagName: "TEXTAREA", value }) as unknown as Element;
+
+  it("allows a bare digit while the chat tab is on screen", () => {
+    expect(shortcutAllowed(base)).toBe(true);
+  });
+
+  it("refuses to decide a card the user is not looking at", () => {
+    // The whole point of the shortcut is answering a visible card. On another
+    // app tab the panel is still mounted, so this is the guard that matters.
+    expect(shortcutAllowed({ ...base, chatVisible: false })).toBe(false);
+  });
+
+  it("refuses while the browser tab is backgrounded", () => {
+    expect(shortcutAllowed({ ...base, documentHidden: true })).toBe(false);
+  });
+
+  it("yields to a draft so typing a digit never decides anything", () => {
+    expect(shortcutAllowed({ ...base, target: field("1") })).toBe(false);
+    expect(shortcutAllowed({ ...base, target: field("hello") })).toBe(false);
+  });
+
+  it("still works with the composer focused but empty", () => {
+    expect(shortcutAllowed({ ...base, target: field("") })).toBe(true);
+    expect(shortcutAllowed({ ...base, target: field("   ") })).toBe(true);
+  });
+
+  it("ignores modified keystrokes so browser shortcuts keep working", () => {
+    for (const m of [{ meta: true }, { ctrl: true }, { alt: true }]) {
+      expect(shortcutAllowed({ ...base, modifiers: { ...NO_MODS, ...m } })).toBe(false);
+    }
   });
 });
