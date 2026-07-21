@@ -6,6 +6,7 @@ import type { Attachment } from "@/lib/chat-types";
 import { Bubble } from "@/components/chat/Bubble";
 import { StatsBar } from "@/components/chat/StatsBar";
 import { Composer } from "@/components/chat/Composer";
+import { NotifyToggle } from "@/components/chat/NotifyToggle";
 import { useChatSession } from "@/lib/use-chat-session";
 
 export function ChatPanel({ agent }: { agent: Agent | null }) {
@@ -93,6 +94,7 @@ function Header({
         <div className="mono text-zinc-500 shrink-0 px-1.5 py-0.5 rounded bg-zinc-100">{model}</div>
       )}
       {sessionId && <div className="mono text-zinc-400 shrink-0">#{sessionId.slice(0, 8)}</div>}
+      <NotifyToggle />
       <button
         onClick={onClear}
         disabled={busy}
