@@ -3,20 +3,56 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS agents (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  path TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active',
-  created_at TEXT NOT NULL,
-  notes TEXT
-);
-CREATE TABLE IF NOT EXISTS skill_states (
-  name TEXT PRIMARY KEY,
-  enabled INTEGER NOT NULL DEFAULT 1
-);
-`;
+/**
+ * Schema history. Append only, never edit a shipped entry.
+ *
+ * "CREATE TABLE IF NOT EXISTS" alone only ever builds a database from nothing.
+ * Against one that already exists it is a no-op, so a column added later would
+ * simply never appear — and the failure is silent, which is the dangerous part.
+ * This file is shared by every agent and the Telegram bridge, so each of them
+ * would carry on against a shape the code no longer believes in.
+ *
+ * Each step runs once, in order, tracked by SQLite's own user_version.
+ */
+const MIGRATIONS: string[] = [
+  // 1 — the original tables.
+  `
+  CREATE TABLE IF NOT EXISTS agents (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    notes TEXT
+  );
+  CREATE TABLE IF NOT EXISTS skill_states (
+    name TEXT PRIMARY KEY,
+    enabled INTEGER NOT NULL DEFAULT 1
+  );
+  `,
+];
+
+/**
+ * Brings a database up to the current schema, from empty or from any older
+ * version. Each step is its own transaction: a failure half way leaves the
+ * version at the last step that completed, so the next start resumes there
+ * instead of replaying work already done.
+ */
+export function migrate(db: Database.Database, steps: string[] = MIGRATIONS): number {
+  const current = db.pragma("user_version", { simple: true }) as number;
+  for (let v = current; v < steps.length; v++) {
+    db.exec("BEGIN");
+    try {
+      db.exec(steps[v]);
+      db.pragma(`user_version = ${v + 1}`);
+      db.exec("COMMIT");
+    } catch (e) {
+      db.exec("ROLLBACK");
+      throw new Error(`schema step ${v + 1} failed: ${(e as Error).message}`);
+    }
+  }
+  return steps.length;
+}
 
 function dbPath(): string {
   return (
@@ -33,7 +69,7 @@ export function getDb(): Database.Database {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     _db = new Database(file);
     _db.pragma("journal_mode = WAL");
-    _db.exec(SCHEMA);
+    migrate(_db);
   }
   return _db;
 }
