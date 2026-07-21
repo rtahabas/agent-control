@@ -1,5 +1,6 @@
 import {
   EMPTY_STATS,
+  type ChatMessage,
   type ChatSnapshot,
   type CumulativeStats,
   type TurnInfo,
@@ -7,6 +8,45 @@ import {
 } from "@/lib/chat-types";
 
 const STORAGE_PREFIX = "chat:";
+
+/**
+ * Per-agent share of sessionStorage. Browsers give an origin a few megabytes in
+ * total and this dashboard drives several agents at once, so no single
+ * transcript may spend the whole allowance.
+ */
+export const SNAPSHOT_BUDGET_BYTES = 1_200_000;
+
+/**
+ * Shrinks a transcript to fit the budget, worst-value-per-byte first.
+ *
+ * A single pasted screenshot is base64 and can run to megabytes — one of them
+ * outweighs thousands of turns of text. So images go before words: their
+ * metadata stays, which keeps the bubble honest about what was sent, and only
+ * then do the oldest turns get dropped.
+ */
+export function trimForStorage(
+  snap: ChatSnapshot,
+  budget = SNAPSHOT_BUDGET_BYTES
+): ChatSnapshot {
+  if (sizeOf(snap) <= budget) return snap;
+
+  const withoutImages = snap.messages.map(stripAttachmentData);
+  let messages = withoutImages;
+  // Drop from the front: the newest turns are the ones worth restoring.
+  while (messages.length > 1 && sizeOf({ ...snap, messages }) > budget) {
+    messages = messages.slice(1);
+  }
+  return { ...snap, messages };
+}
+
+function stripAttachmentData(m: ChatMessage): ChatMessage {
+  if (!m.attachment) return m;
+  return { ...m, attachment: { ...m.attachment, dataBase64: "" } };
+}
+
+function sizeOf(snap: ChatSnapshot): number {
+  return JSON.stringify(snap).length;
+}
 
 export function loadSnapshot(agentId: string): ChatSnapshot | null {
   try {
@@ -17,11 +57,17 @@ export function loadSnapshot(agentId: string): ChatSnapshot | null {
   }
 }
 
-export function saveSnapshot(agentId: string, snap: ChatSnapshot) {
+/**
+ * Persists a transcript for reload. Returns false when it could not be kept —
+ * the caller is expected to say so rather than let the user believe a history
+ * is being saved that is not.
+ */
+export function saveSnapshot(agentId: string, snap: ChatSnapshot): boolean {
   try {
-    sessionStorage.setItem(STORAGE_PREFIX + agentId, JSON.stringify(snap));
+    sessionStorage.setItem(STORAGE_PREFIX + agentId, JSON.stringify(trimForStorage(snap)));
+    return true;
   } catch {
-    /* ignore quota */
+    return false;
   }
 }
 

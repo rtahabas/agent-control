@@ -33,6 +33,7 @@ export const EMPTY_RUN: RunState = {
 const states = new Map<string, RunState>();
 const listeners = new Map<string, Set<() => void>>();
 const hydrated = new Set<string>();
+const storageWarned = new Set<string>();
 
 /**
  * Run-scoped handles. Deliberately outside RunState: mutating them must never
@@ -59,14 +60,24 @@ export function subscribeRun(agentId: string, cb: () => void): () => void {
 }
 
 export function updateRun(agentId: string, updater: (s: RunState) => RunState) {
-  const next = updater(getRun(agentId));
-  states.set(agentId, next);
-  saveSnapshot(agentId, {
+  let next = updater(getRun(agentId));
+  const saved = saveSnapshot(agentId, {
     messages: next.messages,
     sessionId: next.sessionId,
     lastTurn: next.lastTurn,
     stats: next.stats,
   });
+  // Say it once. Storage failing is worth knowing about — a reload will lose the
+  // conversation — but it fails on every keystroke of a run, so repeating it
+  // would bury the chat under its own warning.
+  if (!saved && !storageWarned.has(agentId)) {
+    storageWarned.add(agentId);
+    next = {
+      ...next,
+      error: "Ran out of room to store this chat — it will not survive a reload.",
+    };
+  }
+  states.set(agentId, next);
   listeners.get(agentId)?.forEach((cb) => cb());
 }
 
@@ -119,6 +130,7 @@ export function __resetStore() {
   states.clear();
   listeners.clear();
   hydrated.clear();
+  storageWarned.clear();
   aborts.clear();
   asstRefs.clear();
 }
