@@ -60,6 +60,31 @@ export function decidePermission(
   return true;
 }
 
+/**
+ * Tools this session auto-allows because of an earlier "Allow always". These
+ * skip the permission card entirely (see the allowlist check in makeCanUseTool),
+ * so they need to be inspectable — otherwise a mis-click grants a tool for the
+ * rest of the session with nothing to show for it.
+ */
+export function listSessionAllowlist(sessionId: string | null): string[] {
+  if (!sessionId) return [];
+  return [...(sessionAllowlists.get(sessionId) ?? [])].sort();
+}
+
+/**
+ * Undo an auto-allow, so the tool asks again. Omit `toolName` to clear the whole
+ * session. Returns whether anything was actually removed.
+ */
+export function revokeSessionAllow(sessionId: string | null, toolName?: string): boolean {
+  if (!sessionId) return false;
+  const set = sessionAllowlists.get(sessionId);
+  if (!set) return false;
+  if (toolName === undefined) return sessionAllowlists.delete(sessionId);
+  const removed = set.delete(toolName);
+  if (set.size === 0) sessionAllowlists.delete(sessionId);
+  return removed;
+}
+
 export function makeCanUseTool(emit: EmitFn, getSessionId: () => string | null): CanUseTool {
   return async (toolName, input, opts) => {
     const sid = getSessionId();

@@ -7,6 +7,7 @@ import { Bubble } from "@/components/chat/Bubble";
 import { StatsBar } from "@/components/chat/StatsBar";
 import { Composer } from "@/components/chat/Composer";
 import { NotifyToggle } from "@/components/chat/NotifyToggle";
+import { AllowlistChip } from "@/components/chat/AllowlistChip";
 import { useChatSession } from "@/lib/use-chat-session";
 
 export function ChatPanel({ agent }: { agent: Agent | null }) {
@@ -38,6 +39,10 @@ export function ChatPanel({ agent }: { agent: Agent | null }) {
         model={session.lastTurn?.model}
         busy={session.busy}
         onClear={session.clear}
+        // Re-read the allowlist whenever another "Allow always" is granted.
+        alwaysGrants={
+          session.messages.filter((m) => m.role === "permission" && m.permission?.always).length
+        }
       />
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
         {session.messages.length === 0 && (
@@ -79,12 +84,14 @@ function Header({
   model,
   busy,
   onClear,
+  alwaysGrants,
 }: {
   agent: Agent;
   sessionId: string | null;
   model?: string | null;
   busy: boolean;
   onClear: () => void;
+  alwaysGrants: number;
 }) {
   return (
     <div className="px-6 py-3 border-b border-zinc-200 bg-white flex items-center gap-3 text-xs">
@@ -94,6 +101,7 @@ function Header({
         <div className="mono text-zinc-500 shrink-0 px-1.5 py-0.5 rounded bg-zinc-100">{model}</div>
       )}
       {sessionId && <div className="mono text-zinc-400 shrink-0">#{sessionId.slice(0, 8)}</div>}
+      <AllowlistChip sessionId={sessionId} refreshKey={alwaysGrants} />
       <NotifyToggle />
       <button
         onClick={onClear}
