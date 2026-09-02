@@ -1,9 +1,10 @@
 "use client";
 
 import type { Agent } from "@/lib/api";
-import { NAV, PINNED_TOP, type Tab } from "@/lib/tabs";
+import type { Tab } from "@/lib/tabs";
 import { AgentRoster } from "@/components/AgentRoster";
 import { ConversationList } from "@/components/ConversationList";
+import { SidebarNav } from "@/components/SidebarNav";
 
 interface Props {
   tab: Tab;
@@ -76,48 +77,7 @@ export function Sidebar({
           </button>
         </div>
       </div>
-      {/* min-h-0 is what lets this scroll instead of growing: a flex child will
-          not shrink below its content without it, which pushed the roster and
-          the history list off the bottom of a fixed-height column. */}
-      <nav className="flex-1 min-h-0 overflow-y-auto py-3">
-        <div className="mb-3 pb-3 border-b border-zinc-200">
-          <button
-            type="button"
-            onClick={() => onTabChange(PINNED_TOP.tab)}
-            className={`w-full text-left px-5 py-2 text-sm transition ${
-              PINNED_TOP.tab === tab
-                ? "bg-zinc-100 text-zinc-900 font-semibold border-l-2 border-zinc-900 -ml-[2px] pl-[22px]"
-                : "text-zinc-700 hover:bg-zinc-50 font-medium"
-            }`}
-          >
-            {PINNED_TOP.label}
-          </button>
-        </div>
-        {NAV.map((s) => (
-          <div key={s.heading} className="mb-4">
-            <div className="px-5 mb-1 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-              {s.heading}
-            </div>
-            <ul className="space-y-0.5">
-              {s.items.map((it) => (
-                <li key={it.tab}>
-                  <button
-                    type="button"
-                    onClick={() => onTabChange(it.tab)}
-                    className={`w-full text-left px-5 py-1.5 text-sm transition ${
-                      it.tab === tab
-                        ? "bg-zinc-100 text-zinc-900 font-medium border-l-2 border-zinc-900 -ml-[2px] pl-[22px]"
-                        : "text-zinc-600 hover:bg-zinc-50"
-                    }`}
-                  >
-                    {it.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
+      <SidebarNav tab={tab} onTabChange={onTabChange} />
       <AgentRoster
         agents={agents}
         selectedId={selectedAgent?.id ?? null}
