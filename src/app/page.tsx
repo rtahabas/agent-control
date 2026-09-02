@@ -25,6 +25,11 @@ export default function Home() {
     null,
     (raw) => raw
   );
+  // Folding the rail is a per-window preference, so it rides the same
+  // session-scoped store as the tab and the selected agent.
+  const [rail, setRail] = usePersistedState<string>("app:rail", "open", (raw) =>
+    raw === "closed" ? "closed" : "open"
+  );
   const hydrated = th && sh;
   const [conn, setConn] = useState<ConnState>("loading");
   const [lastFetchTs, setLastFetchTs] = useState<number | null>(null);
@@ -123,6 +128,8 @@ export default function Home() {
         selectedAgent={selectedAgent}
         agents={agents}
         onSelectAgent={setSelectedId}
+        collapsed={rail === "closed"}
+        onToggle={() => setRail((r) => (r === "closed" ? "open" : "closed"))}
       />
       <main className="flex-1 flex flex-col min-w-0">
         <TopBar tab={tab} selectedAgent={selectedAgent} conn={conn} lastFetchTs={lastFetchTs} onRefresh={refresh} />

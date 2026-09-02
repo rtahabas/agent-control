@@ -11,9 +11,39 @@ interface Props {
   selectedAgent: Agent | null;
   agents: Agent[];
   onSelectAgent: (id: string) => void;
+  collapsed: boolean;
+  onToggle: () => void;
 }
 
-export function Sidebar({ tab, onTabChange, selectedAgent, agents, onSelectAgent }: Props) {
+export function Sidebar({
+  tab,
+  onTabChange,
+  selectedAgent,
+  agents,
+  onSelectAgent,
+  collapsed,
+  onToggle,
+}: Props) {
+  // Collapsed keeps the toggle and nothing else. Unmounting the rail entirely
+  // would leave no way back without putting a second control in the top bar,
+  // and a console you can fold but not unfold is worse than one that never
+  // folded.
+  if (collapsed) {
+    return (
+      <aside className="w-11 shrink-0 border-r border-zinc-200 bg-white flex flex-col items-center py-4">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label="Show sidebar"
+          title="Show sidebar"
+          className="w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition"
+        >
+          ▸
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside className="w-60 shrink-0 border-r border-zinc-200 bg-white flex flex-col">
       <div className="px-5 py-4 border-b border-zinc-200">
@@ -21,7 +51,7 @@ export function Sidebar({ tab, onTabChange, selectedAgent, agents, onSelectAgent
           <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center text-sm">
             ▣
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="text-sm font-semibold text-zinc-900 leading-tight">
               Agent Control
             </div>
@@ -29,6 +59,15 @@ export function Sidebar({ tab, onTabChange, selectedAgent, agents, onSelectAgent
               Dashboard
             </div>
           </div>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label="Hide sidebar"
+            title="Hide sidebar"
+            className="ml-auto shrink-0 w-7 h-7 rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition"
+          >
+            ◂
+          </button>
         </div>
       </div>
       {/* min-h-0 is what lets this scroll instead of growing: a flex child will
