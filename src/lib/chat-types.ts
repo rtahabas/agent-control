@@ -168,6 +168,8 @@ export const EMPTY_STATS: CumulativeStats = {
 export interface ChatSnapshot {
   messages: ChatMessage[];
   sessionId: string | null;
+  /** Optional: snapshots written before history existed do not carry one. */
+  conversationId?: string | null;
   lastTurn: TurnInfo | null;
   stats: CumulativeStats;
 }

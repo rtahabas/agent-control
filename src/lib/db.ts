@@ -14,7 +14,7 @@ import fs from "node:fs";
  *
  * Each step runs once, in order, tracked by SQLite's own user_version.
  */
-const MIGRATIONS: string[] = [
+export const MIGRATIONS: string[] = [
   // 1 — the original tables.
   `
   CREATE TABLE IF NOT EXISTS agents (
@@ -29,6 +29,39 @@ const MIGRATIONS: string[] = [
     name TEXT PRIMARY KEY,
     enabled INTEGER NOT NULL DEFAULT 1
   );
+  `,
+  // 2 — conversations kept server-side, so a transcript outlives the browser
+  // that produced it. Additive: nothing above is touched, which is what makes
+  // this safe to run against the database every agent and the bridge share.
+  //
+  // A message's non-text parts (tool call, permission, question, attachment)
+  // go into one JSON column rather than four sparse ones. They are always read
+  // back whole and never queried by field, so columns would buy nothing and
+  // cost a migration every time one of those shapes gains a property.
+  `
+  CREATE TABLE IF NOT EXISTS conversations (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL,
+    title TEXT,
+    session_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    message_count INTEGER NOT NULL DEFAULT 0,
+    cost_usd REAL NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_conv_agent
+    ON conversations(agent_id, updated_at DESC);
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    text TEXT NOT NULL DEFAULT '',
+    payload TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_msg_conv ON messages(conversation_id, seq);
   `,
 ];
 

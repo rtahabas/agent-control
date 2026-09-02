@@ -15,6 +15,8 @@ import { loadSnapshot, saveSnapshot } from "@/lib/chat-helpers";
 export type RunState = {
   messages: ChatMessage[];
   sessionId: string | null;
+  /** Row this transcript is stored under, so it outlives this browser. */
+  conversationId: string | null;
   lastTurn: TurnInfo | null;
   stats: CumulativeStats;
   busy: boolean;
@@ -24,6 +26,7 @@ export type RunState = {
 export const EMPTY_RUN: RunState = {
   messages: [],
   sessionId: null,
+  conversationId: null,
   lastTurn: null,
   stats: EMPTY_STATS,
   busy: false,
@@ -118,6 +121,7 @@ export function updateRun(agentId: string, updater: (s: RunState) => RunState) {
   const saved = saveSnapshot(agentId, {
     messages: next.messages,
     sessionId: next.sessionId,
+    conversationId: next.conversationId,
     lastTurn: next.lastTurn,
     stats: next.stats,
   });
@@ -149,6 +153,7 @@ export function hydrateRun(agentId: string) {
     ...getRun(agentId),
     messages: snap.messages || [],
     sessionId: snap.sessionId ?? null,
+    conversationId: snap.conversationId ?? null,
     lastTurn: snap.lastTurn ?? null,
     stats: snap.stats || EMPTY_STATS,
   });

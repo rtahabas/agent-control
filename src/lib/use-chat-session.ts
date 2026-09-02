@@ -6,6 +6,7 @@ import { type Attachment, type ChatMessage } from "@/lib/chat-types";
 import { rand } from "@/lib/chat-fmt";
 import { runSlashCommand } from "@/lib/chat-slash-run";
 import { clearSnapshot } from "@/lib/chat-helpers";
+import { persistRun } from "@/lib/conversation-sync";
 import {
   EMPTY_RUN,
   abortRun,
@@ -112,6 +113,10 @@ export function useChatSession(agent: Agent | null, visible = true) {
             s.messages.map((x) => (x.streaming ? { ...x, streaming: false, done: true } : x))
           ),
         }));
+        // The turn is over, so the transcript is worth keeping. Not awaited:
+        // the chat is usable again the moment the stream closes, and history
+        // failing to save is a warning, not a reason to block the UI.
+        void persistRun(id);
       }
     },
     [agent]

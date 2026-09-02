@@ -3,6 +3,7 @@
 import type { Agent } from "@/lib/api";
 import { NAV, PINNED_TOP, type Tab } from "@/lib/tabs";
 import { AgentRoster } from "@/components/AgentRoster";
+import { ConversationList } from "@/components/ConversationList";
 
 interface Props {
   tab: Tab;
@@ -30,7 +31,10 @@ export function Sidebar({ tab, onTabChange, selectedAgent, agents, onSelectAgent
           </div>
         </div>
       </div>
-      <nav className="flex-1 overflow-y-auto py-3">
+      {/* min-h-0 is what lets this scroll instead of growing: a flex child will
+          not shrink below its content without it, which pushed the roster and
+          the history list off the bottom of a fixed-height column. */}
+      <nav className="flex-1 min-h-0 overflow-y-auto py-3">
         <div className="mb-3 pb-3 border-b border-zinc-200">
           <button
             type="button"
@@ -74,6 +78,7 @@ export function Sidebar({ tab, onTabChange, selectedAgent, agents, onSelectAgent
         selectedId={selectedAgent?.id ?? null}
         onSelect={onSelectAgent}
       />
+      <ConversationList agentId={selectedAgent?.id ?? null} />
     </aside>
   );
 }
