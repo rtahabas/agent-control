@@ -9,21 +9,26 @@ import { ChatPanel } from "@/components/ChatPanel";
 import type { Agent, State } from "@/lib/api";
 import { fetchAgents, fetchState } from "@/lib/api";
 import { usePersistedState } from "@/lib/persisted-state";
-import { isTab, type Tab } from "@/lib/tabs";
+import { isTab, resolveAgent, resolveTab, type Tab } from "@/lib/tabs";
 import { useAttentionSignal } from "@/lib/use-attention-signal";
 
 const NONE: ModalState = { kind: "none" };
 
+// Hoisted so their identity is stable: usePersistedState lists `parse` as an
+// effect dependency, and an arrow written inline is a new function on every
+// render.
+const parseTab = (raw: string | null) => resolveTab(raw, window.location.search);
+const parseAgent = (raw: string | null) =>
+  resolveAgent(raw, window.location.search);
+
 export default function Home() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [state, setState] = useState<State | null>(null);
-  const [tab, setTab, th] = usePersistedState<Tab>("app:tab", "overview", (raw) =>
-    raw !== null && isTab(raw) ? raw : "overview"
-  );
+  const [tab, setTab, th] = usePersistedState<Tab>("app:tab", "overview", parseTab);
   const [selectedId, setSelectedId, sh] = usePersistedState<string | null>(
     "app:selectedId",
     null,
-    (raw) => raw
+    parseAgent
   );
   // Folding the rail is a per-window preference, so it rides the same
   // session-scoped store as the tab and the selected agent.
