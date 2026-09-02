@@ -21,10 +21,20 @@ export function Projects({ projects }: { projects: Project[] }) {
   return (
     <section>
       <SectionHead title="Projects" count={projects.length} />
-      <div className="bg-zinc-50 rounded-lg border border-zinc-200 overflow-hidden">
-        <table className="w-full text-sm">
+      {/* Six columns do not fit a narrow window, and letting them compress
+          wraps the headings while the cells they label stay on one line — the
+          header grows a second row and the alignment reads as a mistake. The
+          table keeps a floor and scrolls inside its own box instead, so the
+          page never scrolls sideways. */}
+      <div className="bg-zinc-50 rounded-lg border border-zinc-200 overflow-x-auto">
+        <table className="w-full min-w-[52rem] text-sm">
+          {/* `min-width` alone is a floor, not a promise: the browser still
+              wraps text to make columns fit inside it, which is how "Last
+              commit" grew a second line while the dates under it stayed on one.
+              Holding the headings on one line is what raises the table's own
+              minimum, and the container scrolls from there. */}
           <thead className="bg-zinc-50 text-zinc-500 text-xs uppercase tracking-wider">
-            <tr>
+            <tr className="whitespace-nowrap">
               <th className="text-left font-medium px-4 py-2.5">Name</th>
               <th className="text-left font-medium px-4 py-2.5">Branch</th>
               <th className="text-left font-medium px-4 py-2.5">Status</th>

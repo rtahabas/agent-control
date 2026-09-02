@@ -34,19 +34,43 @@ function DayBars({ stats }: { stats: TokenStats }) {
     buckets.push({ date: key, cost: map.get(key) ?? 0 });
   }
   const max = Math.max(0.01, ...buckets.map((b) => b.cost));
+  const day = (d: string) =>
+    new Date(d + "T00:00:00Z").toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  // A day with no spend used to be a 1px line, which reads as a broken element
+  // rather than as zero. Each day now occupies a full-height track; the bar
+  // grows inside it, so an empty day is visibly an empty slot and the row keeps
+  // its shape through a quiet week.
+  //
+  // The bars are grey, not the accent: the accent means selected and nothing
+  // else, and spending is not a selection. It is also what the other two bars
+  // in this app already use (StatsBar, Memory), so the chart reads as part of
+  // the set rather than as its own thing.
   return (
-    <div className="flex items-end gap-1 h-10">
-      {buckets.map((b, i) => {
-        const h = b.cost > 0 ? Math.max(2, (b.cost / max) * 40) : 1;
-        return (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1" title={`${b.date}: ${fmtUsd(b.cost)}`}>
-            <div
-              className={`w-full rounded-sm ${b.cost > 0 ? "bg-emerald-500" : "bg-zinc-200"}`}
-              style={{ height: h }}
-            />
+    <div>
+      <div className="flex items-end gap-1 h-12">
+        {buckets.map((b) => (
+          <div
+            key={b.date}
+            className="flex-1 h-full flex items-end rounded-sm bg-zinc-100"
+            title={`${b.date}: ${fmtUsd(b.cost)}`}
+          >
+            {b.cost > 0 && (
+              <div
+                className="w-full rounded-sm bg-zinc-700"
+                style={{ height: `${Math.max(6, (b.cost / max) * 100)}%` }}
+              />
+            )}
           </div>
-        );
-      })}
+        ))}
+      </div>
+      <div className="mt-1.5 flex justify-between text-[10px] text-zinc-400 mono">
+        <span>{day(buckets[0].date)}</span>
+        <span>{day(buckets[buckets.length - 1].date)}</span>
+      </div>
     </div>
   );
 }

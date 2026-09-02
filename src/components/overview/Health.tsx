@@ -23,19 +23,23 @@ function Row({
   action?: { label: string; onClick: () => void };
   expanded?: ReactNode;
 }) {
-  const palette =
-    tone === "red"
-      ? "bg-rose-50 border-rose-200 text-rose-900"
-      : "bg-amber-50 border-amber-200 text-amber-900";
+  // A filled, bordered, full-width strip is the loudest thing the page can
+  // say, and these are advisories — 114 old log files is not an incident. The
+  // colour moves to a dot and the text, which is enough to find them in a scan
+  // and little enough that the content underneath still leads. The row keeps
+  // its full width so its disclosure has somewhere to open.
+  const dot = tone === "red" ? "bg-rose-500" : "bg-amber-500";
+  const body = tone === "red" ? "text-rose-900" : "text-amber-900";
   return (
-    <div className={`text-xs rounded border ${palette}`}>
-      <div className="flex items-center justify-between gap-3 px-3 py-2">
-        <div>{text}</div>
+    <div className="text-xs">
+      <div className="flex items-center gap-2.5 py-1">
+        <span aria-hidden className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+        <div className={body}>{text}</div>
         {action && (
           <button
             type="button"
             onClick={action.onClick}
-            className="text-[11px] font-medium shrink-0 underline-offset-2 hover:underline"
+            className="ml-auto text-[11px] font-medium shrink-0 text-zinc-500 hover:text-zinc-900 underline-offset-2 hover:underline"
           >
             {action.label}
           </button>
@@ -49,14 +53,16 @@ function Row({
 function StaleList({ logs }: { logs: StaleDailyLog[] }) {
   const sorted = [...logs].sort((a, b) => b.days_old - a.days_old);
   return (
-    <ul className="border-t border-amber-200/60 max-h-56 overflow-y-auto divide-y divide-amber-200/40">
+    // Indented to the text above it rather than boxed: the list belongs to the
+    // row that opened it, and the dot's column is what shows that.
+    <ul className="ml-4 mb-1 max-h-56 overflow-y-auto rounded-md bg-zinc-100/70 divide-y divide-zinc-200/60">
       {sorted.map((l) => (
         <li
           key={l.file}
-          className="flex items-center justify-between px-3 py-1.5 mono text-[11px]"
+          className="flex items-center justify-between px-3 py-1.5 mono text-[11px] text-zinc-600"
         >
           <span>{l.file}</span>
-          <span className="text-amber-800/70">{l.days_old}d</span>
+          <span className="text-zinc-400">{l.days_old}d</span>
         </li>
       ))}
     </ul>
@@ -109,8 +115,9 @@ export function HealthBar({ memory, health, skills }: Props) {
           text={
             <>
               <span className="mono font-medium">{staleCount}</span> daily log
-              {staleCount === 1 ? "" : "s"} stale (&gt;30 days) — consider
-              archiving to <span className="mono">warm-archive.md</span>
+              {staleCount === 1 ? "" : "s"}{" "}
+              stale (&gt;30 days) — consider archiving to{" "}
+              <span className="mono">warm-archive.md</span>
             </>
           }
           action={{
