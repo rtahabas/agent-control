@@ -1,4 +1,4 @@
-# Agent Dashboard
+# Agent Control
 
 Single-page operator console for managing multiple Claude Code agents. Each
 registered agent is a directory with its own `CLAUDE.md`, `memory/`, and
