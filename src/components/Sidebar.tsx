@@ -61,15 +61,10 @@ export function Sidebar({
             </div>
           </div>
         </div>
-        {/* The agent scopes everything under it, so it sits directly beneath the
-            wordmark rather than pinned to the floor. Navigation is three items
-            now and takes only what it needs; the history list is the long,
-            browsable thing, so it gets the leftover height instead of nav. */}
-        <AgentRoster
-          agents={agents}
-          selectedId={selectedAgent?.id ?? null}
-          onSelect={onSelectAgent}
-        />
+        {/* No agent list here any more: it is one line of information that was
+            taking a block of the column, and it now lives in the top bar as a
+            picker, next to the conversation it applies to. The folded rail keeps
+            its strip, which is all that rail has room to say. */}
         <SidebarNav tab={tab} onTabChange={onTabChange} />
         <ConversationList agentId={selectedAgent?.id ?? null} />
       </div>

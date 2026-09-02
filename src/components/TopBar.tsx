@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Agent } from "@/lib/api";
 import type { Tab } from "@/lib/tabs";
+import { AgentPicker } from "@/components/AgentPicker";
 import { tabLabel } from "@/lib/tabs";
 import { persistedAge } from "@/lib/persisted-state";
 
@@ -29,12 +30,14 @@ const CONN_TEXT: Record<ConnState, string> = {
 interface Props {
   tab: Tab;
   selectedAgent: Agent | null;
+  agents: Agent[];
+  onSelectAgent: (id: string) => void;
   conn: ConnState;
   lastFetchTs: number | null;
   onRefresh: () => void;
 }
 
-export function TopBar({ tab, selectedAgent, conn, lastFetchTs, onRefresh }: Props) {
+export function TopBar({ tab, selectedAgent, agents, onSelectAgent, conn, lastFetchTs, onRefresh }: Props) {
   return (
     <header className="border-b border-zinc-200 bg-white px-6 py-3 flex items-center gap-3 shrink-0">
       <div>
@@ -47,11 +50,9 @@ export function TopBar({ tab, selectedAgent, conn, lastFetchTs, onRefresh }: Pro
         </h1>
       </div>
       <div className="flex-1" />
-      {selectedAgent && (
-        <div className="text-xs text-zinc-500 mr-2">
-          agent <span className="mono text-zinc-900">{selectedAgent.name}</span>
-        </div>
-      )}
+      <div className="mr-2">
+        <AgentPicker agents={agents} selectedId={selectedAgent?.id ?? null} onSelect={onSelectAgent} />
+      </div>
       <AgeBadge ts={lastFetchTs} />
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${CONN_STYLE[conn]}`}
