@@ -61,7 +61,7 @@ export function AllowlistChip({
         {tools.length} auto-allowed
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-10 w-60 rounded-md border border-zinc-200 bg-white shadow-lg p-2 space-y-1">
+        <div className="absolute right-0 top-full mt-1 z-10 w-60 rounded-md border border-zinc-200 bg-zinc-50 shadow-lg p-2 space-y-1">
           {tools.map((t) => (
             <div key={t} className="flex items-center gap-2">
               <span className="mono text-zinc-700 truncate flex-1">{t}</span>

@@ -33,7 +33,7 @@ export function SkillsPicker({ selected, onChange, disabled }: Props) {
   if (catalog.length === 0) return <div className="text-xs text-zinc-500 px-2 py-3">No skills in catalog.</div>;
 
   return (
-    <div className="border border-zinc-200 rounded-lg max-h-56 overflow-y-auto bg-white">
+    <div className="border border-zinc-200 rounded-lg max-h-56 overflow-y-auto bg-zinc-50">
       {catalog.map((s) => (
         <label
           key={s.name}

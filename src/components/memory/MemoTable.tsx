@@ -13,7 +13,7 @@ export function MemoTable({ files, onFileClick }: Props) {
     return <div className="text-sm text-zinc-400 px-3 py-6 text-center">Nothing matches this filter.</div>;
   }
   return (
-    <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">
+    <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50">
       <table className="w-full text-xs">
         <thead className="bg-zinc-50 text-zinc-500 uppercase tracking-wider">
           <tr>

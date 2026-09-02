@@ -54,7 +54,7 @@ export function AgentDetail({ agent, state, onEdit, onDelete, onOpenFile }: Prop
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {stats.map((s) => (
-          <div key={s.label} className="bg-white rounded-lg border border-zinc-200 p-3">
+          <div key={s.label} className="bg-zinc-50 rounded-lg border border-zinc-200 p-3">
             <div className="text-2xl font-semibold text-zinc-900 mono">{s.value}</div>
             <div className="text-xs text-zinc-500 mt-0.5">{s.label}</div>
           </div>
@@ -107,7 +107,7 @@ function FilePreview({
       type="button"
       onClick={onOpen}
       disabled={!!error}
-      className="block w-full text-left bg-white rounded-lg border border-zinc-200 p-3 hover:border-zinc-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      className="block w-full text-left bg-zinc-50 rounded-lg border border-zinc-200 p-3 hover:border-zinc-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs font-mono text-zinc-700">{file}</div>

@@ -45,7 +45,7 @@ export function TelegramSettings({ agentName }: Props) {
   };
 
   return (
-    <section className="bg-white rounded-lg border border-zinc-200 p-4 space-y-3">
+    <section className="bg-zinc-50 rounded-lg border border-zinc-200 p-4 space-y-3">
       <div className="flex items-baseline justify-between">
         <div>
           <h3 className="text-sm font-semibold text-zinc-900">Telegram notifications</h3>

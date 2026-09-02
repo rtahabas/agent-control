@@ -128,12 +128,13 @@ export default function Home() {
         selectedAgent={selectedAgent}
         agents={agents}
         onSelectAgent={setSelectedId}
+        onOpenChat={() => setTab("chat")}
         collapsed={rail === "closed"}
         onToggle={() => setRail((r) => (r === "closed" ? "open" : "closed"))}
       />
-      <main className="flex-1 flex flex-col min-w-0">
-        <TopBar tab={tab} selectedAgent={selectedAgent} agents={agents} onSelectAgent={setSelectedId} conn={conn} lastFetchTs={lastFetchTs} onRefresh={refresh} />
-        <div className="flex-1 min-h-0 relative bg-zinc-50">
+      <main className="flex-1 flex flex-col min-w-0 my-2.5 mr-2.5 rounded-2xl bg-zinc-50 overflow-hidden lift">
+        <TopBar tab={tab} onTabChange={setTab} selectedAgent={selectedAgent} agents={agents} onSelectAgent={setSelectedId} conn={conn} lastFetchTs={lastFetchTs} onRefresh={refresh} />
+        <div className="flex-1 min-h-0 relative">
           <div className={`absolute inset-0 overflow-y-auto ${tab === "chat" ? "hidden" : ""}`}>
             <TabRouter
               tab={tab}

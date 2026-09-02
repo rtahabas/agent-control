@@ -64,7 +64,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+    <div className="rounded-xl bg-zinc-100/70 px-3 py-2">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-zinc-500 uppercase tracking-wider text-[10px] font-medium">{title}</span>
         {right}

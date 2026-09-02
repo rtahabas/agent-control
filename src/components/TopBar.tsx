@@ -4,15 +4,19 @@ import { useEffect, useState } from "react";
 import type { Agent } from "@/lib/api";
 import type { Tab } from "@/lib/tabs";
 import { AgentPicker } from "@/components/AgentPicker";
+import { TabMenu } from "@/components/TabMenu";
 import { tabLabel } from "@/lib/tabs";
 import { persistedAge } from "@/lib/persisted-state";
 
 export type ConnState = "loading" | "ok" | "error";
 
+// Borderless. The dot already carries the state; a ring around it was the
+// third thing saying the same word. Only an error keeps a tinted ground —
+// "connected" is the expected case and does not need to announce itself.
 const CONN_STYLE: Record<ConnState, string> = {
-  loading: "border-amber-300 bg-amber-50 text-amber-700",
-  ok: "border-emerald-300 bg-emerald-50 text-emerald-700",
-  error: "border-rose-300 bg-rose-50 text-rose-700",
+  loading: "text-amber-700",
+  ok: "text-zinc-400",
+  error: "bg-rose-50 text-rose-700",
 };
 
 const CONN_DOT: Record<ConnState, string> = {
@@ -29,6 +33,7 @@ const CONN_TEXT: Record<ConnState, string> = {
 
 interface Props {
   tab: Tab;
+  onTabChange: (t: Tab) => void;
   selectedAgent: Agent | null;
   agents: Agent[];
   onSelectAgent: (id: string) => void;
@@ -37,32 +42,30 @@ interface Props {
   onRefresh: () => void;
 }
 
-export function TopBar({ tab, selectedAgent, agents, onSelectAgent, conn, lastFetchTs, onRefresh }: Props) {
+export function TopBar({ tab, onTabChange, selectedAgent, agents, onSelectAgent, conn, lastFetchTs, onRefresh }: Props) {
   return (
-    <header className="border-b border-zinc-200 bg-white px-6 py-3 flex items-center gap-3 shrink-0">
-      <div>
-        <div className="text-[11px] text-zinc-400 mono">
-          Dashboard <span className="px-1">›</span>{" "}
-          <span className="text-zinc-700">{tabLabel(tab)}</span>
-        </div>
-        <h1 className="text-base font-semibold text-zinc-900 mt-0.5">
-          {tabLabel(tab)}
-        </h1>
-      </div>
+    <header className="material px-6 py-3.5 flex items-center gap-3 shrink-0">
+      {/* One title, not two. The breadcrumb read "Dashboard › Chat" directly
+          above a heading that read "Chat" — the same word twice, one of them in
+          a monospace face that belongs to code, not to navigation. */}
+      <h1 className="text-[17px] font-semibold text-zinc-900 tracking-[-0.02em]">
+        {tabLabel(tab)}
+      </h1>
       <div className="flex-1" />
       <div className="mr-2">
         <AgentPicker agents={agents} selectedId={selectedAgent?.id ?? null} onSelect={onSelectAgent} />
       </div>
+      <TabMenu tab={tab} onTabChange={onTabChange} />
       <AgeBadge ts={lastFetchTs} />
       <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${CONN_STYLE[conn]}`}
+        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${CONN_STYLE[conn]}`}
       >
         <span className={`w-1.5 h-1.5 rounded-full ${CONN_DOT[conn]}`} />
         {CONN_TEXT[conn]}
       </span>
       <button
         onClick={onRefresh}
-        className="px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-700 transition"
+        className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition"
       >
         Refresh
       </button>

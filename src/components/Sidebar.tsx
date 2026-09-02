@@ -12,6 +12,7 @@ interface Props {
   selectedAgent: Agent | null;
   agents: Agent[];
   onSelectAgent: (id: string) => void;
+  onOpenChat: () => void;
   collapsed: boolean;
   onToggle: () => void;
 }
@@ -22,6 +23,7 @@ export function Sidebar({
   selectedAgent,
   agents,
   onSelectAgent,
+  onOpenChat,
   collapsed,
   onToggle,
 }: Props) {
@@ -38,7 +40,7 @@ export function Sidebar({
   // card is visible from a rail that is 44px wide.
   return (
     <aside
-      className={`relative shrink-0 border-r border-zinc-200 bg-white overflow-hidden
+      className={`relative shrink-0 overflow-hidden
         transition-[width] duration-200 ease-out motion-reduce:transition-none
         ${collapsed ? "w-11" : "w-60"}`}
     >
@@ -48,7 +50,7 @@ export function Sidebar({
           transition-opacity duration-150 motion-reduce:transition-none
           ${collapsed ? "opacity-0 pointer-events-none" : "opacity-100"}`}
       >
-        <div className="px-5 py-4 border-b border-zinc-200">
+        <div className="px-5 py-4">
           {/* Wordmark, no badge. The glyph in a coloured box was decoration, and
               it spent the accent on something that is never selected — which is
               the only thing the accent is supposed to mean. */}
@@ -66,7 +68,7 @@ export function Sidebar({
             picker, next to the conversation it applies to. The folded rail keeps
             its strip, which is all that rail has room to say. */}
         <SidebarNav tab={tab} onTabChange={onTabChange} />
-        <ConversationList agentId={selectedAgent?.id ?? null} />
+        <ConversationList agentId={selectedAgent?.id ?? null} onOpened={onOpenChat} />
       </div>
 
       <div

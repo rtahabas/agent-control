@@ -97,7 +97,7 @@ export function SubAgentViewer({ agentId, subName, onClose }: Props) {
           {!loading && split && mode === "read" && (
             <>
               {Object.keys(split.meta).length > 0 && (
-                <div className="bg-white border border-zinc-200 rounded-lg p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {Object.entries(split.meta).map(([k, v]) => (
                     <div key={k} className="text-xs">
                       <span className="text-zinc-500 mr-2 font-mono">{k}</span>
@@ -111,7 +111,7 @@ export function SubAgentViewer({ agentId, subName, onClose }: Props) {
           )}
           {!loading && content !== null && mode === "edit" && (
             <textarea value={content} onChange={(e) => setContent(e.target.value)} disabled={saving} spellCheck={false}
-              className="w-full min-h-[60vh] px-3 py-2 text-xs font-mono leading-relaxed border border-zinc-300 rounded-lg focus:outline-none focus:border-zinc-500 bg-white disabled:bg-zinc-50" />
+              className="w-full min-h-[60vh] px-3 py-2 text-xs font-mono leading-relaxed border border-zinc-300 rounded-lg focus:outline-none focus:border-zinc-500 bg-zinc-50 disabled:bg-zinc-50" />
           )}
         </div>
         <div className="px-5 py-3 border-t border-zinc-100 flex items-center gap-2">

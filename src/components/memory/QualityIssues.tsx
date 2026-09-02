@@ -51,7 +51,7 @@ function Tile({
       ? "bg-rose-50 text-rose-900 border-rose-200 hover:border-rose-300"
       : tone === "amber"
         ? "bg-amber-50 text-amber-900 border-amber-200 hover:border-amber-300"
-        : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300";
+        : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300";
   return (
     <button
       type="button"

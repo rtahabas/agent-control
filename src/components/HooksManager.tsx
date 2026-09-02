@@ -106,7 +106,7 @@ export function HooksManager({ agentId, onClose }: Props) {
                     <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">{evt}</div>
                     <div className="space-y-2">
                       {groups.map((g, i) => (
-                        <div key={i} className="bg-white border border-zinc-200 rounded-lg p-3 space-y-2">
+                        <div key={i} className="bg-zinc-50 border border-zinc-200 rounded-lg p-3 space-y-2">
                           {g.matcher && <div className="text-[11px] font-mono text-zinc-500">matcher: <span className="text-zinc-900">{g.matcher}</span></div>}
                           {(g.hooks ?? []).map((h, j) => (
                             <div key={j} className="text-xs space-y-0.5">
@@ -129,7 +129,7 @@ export function HooksManager({ agentId, onClose }: Props) {
           )}
           {!loading && content !== null && mode === "edit" && (
             <textarea value={content} onChange={(e) => setContent(e.target.value)} disabled={saving} spellCheck={false}
-              className="w-full min-h-[60vh] px-3 py-2 text-xs font-mono leading-relaxed border border-zinc-300 rounded-lg focus:outline-none focus:border-zinc-500 bg-white disabled:bg-zinc-50" />
+              className="w-full min-h-[60vh] px-3 py-2 text-xs font-mono leading-relaxed border border-zinc-300 rounded-lg focus:outline-none focus:border-zinc-500 bg-zinc-50 disabled:bg-zinc-50" />
           )}
         </div>
         <div className="px-5 py-3 border-t border-zinc-100 flex items-center gap-2">

@@ -83,7 +83,7 @@ export function MemoryBrowser({ agentId, onClose, onSelect }: Props) {
                     key={f}
                     type="button"
                     onClick={() => onSelect(f)}
-                    className="text-xs font-mono px-2 py-1 rounded bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-100 hover:border-zinc-300"
+                    className="text-xs font-mono px-2 py-1 rounded bg-zinc-50 border border-zinc-200 text-zinc-700 hover:bg-zinc-100 hover:border-zinc-300"
                   >
                     {f}
                   </button>

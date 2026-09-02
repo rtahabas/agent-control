@@ -24,7 +24,7 @@ export function QuestionCard({
 
   return (
     <div className="flex justify-start">
-      <div className="max-w-[80%] w-full border rounded-lg bg-white border-blue-200 overflow-hidden">
+      <div className="max-w-[80%] w-full border rounded-lg bg-zinc-50 border-blue-200 overflow-hidden">
         <Header count={req.questions.length} status={req.status} />
         <div className="divide-y divide-zinc-100">
           {req.questions.map((q, i) => (
@@ -102,7 +102,7 @@ function Question({
               className={`text-xs px-2.5 py-1 rounded-md border transition ${
                 isSelected
                   ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-400 disabled:opacity-60"
+                  : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-400 disabled:opacity-60"
               }`}
             >
               {numbered && i < 9 && (

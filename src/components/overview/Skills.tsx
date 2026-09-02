@@ -77,7 +77,7 @@ export function Skills({
           <button type="button" onClick={onNewClick} className="text-[11px] px-2 py-0.5 rounded border border-zinc-200 text-zinc-700 hover:bg-zinc-50">+ New skill</button>
         )}
       </div>
-      <div className="bg-white rounded-lg border border-zinc-200 p-4 mb-3">
+      <div className="bg-zinc-50 rounded-lg border border-zinc-200 p-4 mb-3">
         <div className="flex h-2 rounded-full overflow-hidden bg-zinc-100 mb-3">
           {(Object.keys(counts) as SkillCategory[]).map((c) =>
             counts[c] > 0 ? (
@@ -95,7 +95,7 @@ export function Skills({
           ))}
         </div>
       </div>
-      <div className="bg-white rounded-lg border border-zinc-200 overflow-hidden">
+      <div className="bg-zinc-50 rounded-lg border border-zinc-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-500 text-xs uppercase tracking-wider">
             <tr>

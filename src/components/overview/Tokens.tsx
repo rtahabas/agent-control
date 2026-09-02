@@ -76,7 +76,7 @@ export function Tokens({ agentId }: Props) {
           {loading ? "…" : "Refresh"}
         </button>
       </div>
-      <div className="bg-white rounded-lg border border-zinc-200 p-4">
+      <div className="bg-zinc-50 rounded-lg border border-zinc-200 p-4">
         {error && <div className="text-sm text-rose-600">{error}</div>}
         {!error && !stats && loading && <div className="text-sm text-zinc-500">Scanning session logs…</div>}
         {!error && stats && stats.total.events === 0 && (

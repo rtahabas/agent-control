@@ -70,7 +70,7 @@ export function SettingsPage({ agentId, agentName }: Props) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           spellCheck={false}
-          className="w-full h-[60vh] px-3 py-2 text-xs font-mono leading-relaxed border border-zinc-300 rounded-lg focus:outline-none focus:border-zinc-500 bg-white"
+          className="w-full h-[60vh] px-3 py-2 text-xs font-mono leading-relaxed border border-zinc-300 rounded-lg focus:outline-none focus:border-zinc-500 bg-zinc-50"
         />
       )}
       <p className="mt-3 text-[11px] text-zinc-400">

@@ -2,26 +2,33 @@
 @plugin "@tailwindcss/typography";
 
 @theme inline {
-  --font-sans: var(--font-sans);
+  /* The system face first, so this renders in SF on a Mac — which is most of
+     why an interface reads as native here. Inter follows as the fallback and
+     is close enough in metrics that nothing reflows. Defined on the theme
+     token rather than on `body`, because the body carries Tailwind's
+     `font-sans` utility and a rule on the element loses to it. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono);
 }
 
 /*
- * The neutral ramp, warmed.
+ * Light, warm, one accent.
  *
- * Twenty-odd components name `zinc-*` directly, so the ramp is redefined here
- * rather than reclassed across all of them: one file changes the whole surface
- * and reverting is deleting this block. The values are Tailwind's own `stone`,
- * which is the same lightness at every step — so every existing contrast pair
- * still holds — but neutral-warm instead of blue-grey. Nothing gets darker or
- * lighter; it only stops looking cold.
+ * Twenty-odd components name `zinc-*` and every panel said `bg-white`, so the
+ * palette is defined once here instead of being reclassed across all of them.
+ * `bg-white` was renamed to `bg-zinc-50` for the same reason: white is a
+ * colour, "the surface" is a role, and only the role survives a change here.
+ *
+ * The values are Tailwind's `stone` — the same lightness at every step as the
+ * `zinc` they replace, so every existing contrast pair still holds, but warm
+ * instead of blue-grey.
  *
  * `accent` is the one colour in the app that is not a grey. It marks what is
- * selected and nothing else. A second accent would make the first one mean
- * less.
+ * selected and nothing else; a second accent would make the first mean less.
  */
 @theme {
-  --color-zinc-50: #fafaf9;
+  --color-zinc-50: #ffffff;
   --color-zinc-100: #f5f5f4;
   --color-zinc-200: #e7e5e4;
   --color-zinc-300: #d6d3d1;
@@ -37,13 +44,41 @@
   --color-accent-soft: #f7edf1;
 }
 
+body {
+  background: #f5f4f2;
+}
+
+/*
+ * Chrome that sits over content — the rail, the top bar, the composer — is a
+ * material rather than a panel: mostly opaque, slightly translucent, blurred
+ * behind. It is what makes a surface read as floating above another instead of
+ * being fenced off from it by a line, which is the whole reason the borders
+ * came out.
+ */
+.material {
+  background: color-mix(in srgb, #ffffff 78%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Two shadows, both faint: a tight one for the edge, a wide soft one for the
+   lift. A single dark shadow reads as a drop shadow; two read as depth. */
+.lift {
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.04),
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 8px 24px -8px rgb(0 0 0 / 0.10);
+}
+
 html, body {
   height: 100%;
 }
 
 body {
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.011em;
 }
 
 .mono {

@@ -86,7 +86,7 @@ export function ActivityPage({ agentId }: Props) {
             className={`px-2.5 py-1 rounded-md border ${
               filter === k
                 ? "bg-zinc-900 text-white border-zinc-900"
-                : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                : "bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-50"
             }`}
           >
             {k}
@@ -98,7 +98,7 @@ export function ActivityPage({ agentId }: Props) {
       {!error && events.length === 0 && data && (
         <div className="text-sm text-zinc-400">No events match this filter.</div>
       )}
-      <ul className="bg-white rounded-lg border border-zinc-200 divide-y divide-zinc-100">
+      <ul className="bg-zinc-50 rounded-lg border border-zinc-200 divide-y divide-zinc-100">
         {events.map((e, i) => (
           <li key={`${e.session}-${e.ts}-${i}`} className="flex items-start gap-3 px-4 py-3">
             <span className={`shrink-0 inline-block px-1.5 py-0.5 mt-0.5 rounded border text-[10px] font-medium uppercase tracking-wide ${BADGE[e.kind]}`}>

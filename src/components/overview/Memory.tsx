@@ -21,7 +21,7 @@ export function Memory({
   return (
     <section>
       <SectionHead title="Memory" />
-      <div className="bg-white rounded-lg border border-zinc-200 p-4 space-y-3">
+      <div className="bg-zinc-50 rounded-lg border border-zinc-200 p-4 space-y-3">
         <div className="flex items-baseline gap-2 pb-3 border-b border-zinc-100">
           <span className="text-3xl font-semibold text-zinc-900 mono">{memory.total_files}</span>
           <span className="text-xs text-zinc-500">

@@ -23,7 +23,7 @@ export function SubAgents({
           <button type="button" onClick={onNewClick} className="text-[11px] px-2 py-0.5 rounded border border-zinc-200 text-zinc-700 hover:bg-zinc-50">+ New</button>
         )}
       </div>
-      <div className="bg-white rounded-lg border border-zinc-200 p-4">
+      <div className="bg-zinc-50 rounded-lg border border-zinc-200 p-4">
         <div className="flex flex-wrap gap-1.5">
           {agents.map((a) =>
             onSubAgentClick ? (
@@ -56,7 +56,7 @@ export function Hooks({
           <button type="button" onClick={onManageClick} className="text-[11px] px-2 py-0.5 rounded border border-zinc-200 text-zinc-700 hover:bg-zinc-50">Manage</button>
         )}
       </div>
-      <div className="bg-white rounded-lg border border-zinc-200 grid grid-cols-2 divide-x divide-y divide-zinc-100">
+      <div className="bg-zinc-50 rounded-lg border border-zinc-200 grid grid-cols-2 divide-x divide-y divide-zinc-100">
         {Object.entries(hooks).map(([k, v]) => (
           <div key={k} className="p-3 text-center">
             <div className="text-2xl font-semibold text-zinc-900 mono">{v}</div>
@@ -80,7 +80,7 @@ export function Pending({ pending }: { pending: string[] }) {
           items.map((it, i) => (
             <div
               key={i}
-              className="bg-white rounded-lg border border-zinc-200 p-4 hover:border-zinc-300 transition"
+              className="bg-zinc-50 rounded-lg border border-zinc-200 p-4 hover:border-zinc-300 transition"
             >
               <div className="flex items-baseline gap-2 mb-1">
                 <span className="text-xs mono text-zinc-400 font-medium">

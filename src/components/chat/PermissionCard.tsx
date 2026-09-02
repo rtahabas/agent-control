@@ -17,7 +17,7 @@ export function PermissionCard({
   const pending = req.status === "pending";
   return (
     <div className="flex justify-start">
-      <div className="max-w-[80%] w-full border rounded-lg bg-white border-amber-300 overflow-hidden">
+      <div className="max-w-[80%] w-full border rounded-lg bg-zinc-50 border-amber-300 overflow-hidden">
         <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2 text-xs">
           <span className="font-medium text-amber-900">
             {req.title || `Allow ${req.tool_name}?`}

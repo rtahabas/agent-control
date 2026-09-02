@@ -98,7 +98,7 @@ function PrimaryBtn({
   const cls =
     variant === "solid"
       ? "bg-zinc-900 text-white hover:bg-zinc-700"
-      : "border border-zinc-200 text-zinc-600 hover:bg-white hover:border-zinc-300";
+      : "border border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:border-zinc-300";
   return (
     <button
       onClick={onClick}

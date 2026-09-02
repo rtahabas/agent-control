@@ -119,7 +119,7 @@ export function FileViewer({ agentId, file, onClose }: Props) {
               onChange={(e) => setContent(e.target.value)}
               disabled={saving}
               spellCheck={false}
-              className="w-full min-h-[60vh] px-3 py-2 text-xs font-mono leading-relaxed border border-zinc-300 rounded-lg focus:outline-none focus:border-zinc-500 bg-white disabled:bg-zinc-50"
+              className="w-full min-h-[60vh] px-3 py-2 text-xs font-mono leading-relaxed border border-zinc-300 rounded-lg focus:outline-none focus:border-zinc-500 bg-zinc-50 disabled:bg-zinc-50"
             />
           )}
         </div>

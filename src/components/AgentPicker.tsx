@@ -78,7 +78,7 @@ export function AgentPicker({
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 top-full mt-1 z-20 min-w-52 rounded-lg border border-zinc-200 bg-white shadow-lg py-1"
+          className="absolute right-0 top-full mt-1 z-20 min-w-52 rounded-lg border border-zinc-200 bg-zinc-50 shadow-lg py-1"
         >
           {agents.map((a) => {
             const status = statusOf(attention[a.id]);

@@ -43,7 +43,7 @@ export function ModalShell({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`bg-white rounded-xl shadow-2xl w-full ${wide ? "max-w-2xl" : "max-w-md"} mx-4 border border-zinc-200`}
+        className={`bg-zinc-50 rounded-xl shadow-2xl w-full ${wide ? "max-w-2xl" : "max-w-md"} mx-4 border border-zinc-200`}
       >
         {children}
       </div>

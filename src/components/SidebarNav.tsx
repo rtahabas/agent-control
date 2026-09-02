@@ -1,17 +1,15 @@
 "use client";
 
 import { NAV, PINNED_TOP, type Tab } from "@/lib/tabs";
-import { usePersistedState } from "@/lib/persisted-state";
 
 /**
- * Navigation, with the management screens folded away.
+ * The rail navigates content, and there are two pieces of it.
  *
- * Nine tabs across four headings were all on screen at once, next to the two
- * you actually use. The two that earn permanent space stay; the rest sit behind
- * one disclosure. Nothing was removed — a console that hides a screen you
- * cannot find again is worse than a crowded one.
+ * The other nine screens used to be here under a disclosure, grouped by four
+ * headings — three levels of structure for pages you open a few times a day,
+ * kept permanently beside the one you read constantly. They moved behind the
+ * gear in the top bar. What is left is what you actually switch between.
  */
-
 const ALWAYS: Tab[] = ["overview"];
 
 export function SidebarNav({
@@ -21,70 +19,23 @@ export function SidebarNav({
   tab: Tab;
   onTabChange: (t: Tab) => void;
 }) {
-  const [manual, setManual] = usePersistedState<string>("app:manage", "closed", (raw) =>
-    raw === "open" ? "open" : "closed"
-  );
-
-  const inside = NAV.flatMap((s) => s.items)
-    .map((i) => i.tab)
-    .filter((t) => !ALWAYS.includes(t));
-
-  // Derived rather than stored: landing on a hidden tab must open the group, or
-  // you would be looking at a screen with nothing in the rail marking it. An
-  // effect that opened it would fight the user closing it again.
-  const open = manual === "open" || inside.includes(tab);
-
   return (
-    <nav className="shrink-0 py-3">
-      <Item label={PINNED_TOP.label} active={tab === PINNED_TOP.tab} onClick={() => onTabChange(PINNED_TOP.tab)} strong />
+    <nav className="shrink-0 py-2 flex flex-col gap-0.5">
+      <Item
+        label={PINNED_TOP.label}
+        active={tab === PINNED_TOP.tab}
+        onClick={() => onTabChange(PINNED_TOP.tab)}
+      />
       {NAV.flatMap((s) => s.items)
         .filter((i) => ALWAYS.includes(i.tab))
         .map((i) => (
-          <Item key={i.tab} label={i.label} active={tab === i.tab} onClick={() => onTabChange(i.tab)} />
+          <Item
+            key={i.tab}
+            label={i.label}
+            active={tab === i.tab}
+            onClick={() => onTabChange(i.tab)}
+          />
         ))}
-
-      <button
-        type="button"
-        onClick={() => setManual(open ? "closed" : "open")}
-        aria-expanded={open}
-        className="mt-3 w-full flex items-center gap-1.5 px-5 py-1.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider hover:text-zinc-600 transition"
-      >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`transition-transform ${open ? "rotate-90" : ""}`}
-          aria-hidden
-        >
-          <path d="M3.5 1.5 L7 5 L3.5 8.5" />
-        </svg>
-        Manage
-      </button>
-
-      {open &&
-        NAV.map((s) => {
-          const items = s.items.filter((i) => !ALWAYS.includes(i.tab));
-          if (items.length === 0) return null;
-          return (
-            <div key={s.heading} className="mb-3">
-              <div className="px-5 mb-1 text-[10px] font-medium text-zinc-300 uppercase tracking-wider">
-                {s.heading}
-              </div>
-              <ul className="space-y-0.5">
-                {items.map((i) => (
-                  <li key={i.tab}>
-                    <Item label={i.label} active={tab === i.tab} onClick={() => onTabChange(i.tab)} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
     </nav>
   );
 }
@@ -93,21 +44,17 @@ function Item({
   label,
   active,
   onClick,
-  strong = false,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
-  strong?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left px-5 py-1.5 text-sm transition ${
-        active
-          ? "bg-accent-soft text-accent font-medium border-l-2 border-accent -ml-[2px] pl-[22px]"
-          : `hover:bg-zinc-50 ${strong ? "text-zinc-700 font-medium" : "text-zinc-600"}`
+      className={`mx-2 rounded-lg text-left px-3 py-1.5 text-[13px] transition ${
+        active ? "bg-accent-soft text-accent font-medium" : "text-zinc-600 hover:bg-zinc-100"
       }`}
     >
       {label}

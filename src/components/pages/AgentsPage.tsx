@@ -28,7 +28,7 @@ export function AgentsPage({
 
   return (
     <div className="flex h-full">
-      <aside className="w-72 shrink-0 border-r border-zinc-200 bg-white flex flex-col">
+      <aside className="w-72 shrink-0 border-r border-zinc-200 bg-zinc-50 flex flex-col">
         <div className="p-4 flex items-center justify-between border-b border-zinc-100">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-zinc-400">Workspace</div>

@@ -21,7 +21,7 @@ export function Projects({ projects }: { projects: Project[] }) {
   return (
     <section>
       <SectionHead title="Projects" count={projects.length} />
-      <div className="bg-white rounded-lg border border-zinc-200 overflow-hidden">
+      <div className="bg-zinc-50 rounded-lg border border-zinc-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-500 text-xs uppercase tracking-wider">
             <tr>
