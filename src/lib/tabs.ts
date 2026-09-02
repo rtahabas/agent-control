@@ -35,7 +35,7 @@ export const NAV: NavSection[] = [
     heading: "Workspace",
     items: [
       { tab: "overview", label: "Overview" },
-      { tab: "agents", label: "Agents" },
+      { tab: "agents", label: "Edit agents" },
     ],
   },
   {

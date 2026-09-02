@@ -91,7 +91,7 @@ export function ConversationList({ agentId }: { agentId: string | null }) {
       }));
 
   return (
-    <div className="border-t border-zinc-200 shrink-0 flex flex-col max-h-64">
+    <div className="border-t border-zinc-200 flex-1 min-h-0 flex flex-col">
       <div className="px-4 pt-3 pb-2">
         <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
           History

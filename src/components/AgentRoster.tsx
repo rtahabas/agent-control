@@ -40,7 +40,7 @@ export function AgentRoster({
               title={`${a.name} — ${STATUS_LABEL[status]}`}
               className={`relative w-7 h-7 shrink-0 rounded-md text-[11px] font-medium transition ${
                 selected
-                  ? "bg-zinc-900 text-white"
+                  ? "bg-accent text-white"
                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
               }`}
             >
@@ -58,14 +58,14 @@ export function AgentRoster({
   }
 
   return (
-    <div className="border-t border-zinc-200 px-3 py-3">
-      <div className="px-2 text-[10px] uppercase tracking-wider text-zinc-400 mb-1.5">
-        Agents
-      </div>
+    // Capped and scrollable: this list grows with the number of agents and had
+    // no ceiling, so a long roster pushed the history list out of the rail and
+    // took space from navigation that it was not using.
+    <div className="shrink-0 px-3 py-3">
       {agents.length === 0 ? (
-        <div className="px-2 text-xs text-zinc-400">No agents — open Agents to add</div>
+        <div className="px-2 text-xs text-zinc-400">No agents — open Edit agents to add one</div>
       ) : (
-        <ul className="space-y-0.5">
+        <ul className="space-y-0.5 max-h-40 overflow-y-auto">
           {agents.map((a) => {
             const status = statusOf(attention[a.id]);
             const selected = a.id === selectedId;
@@ -76,13 +76,13 @@ export function AgentRoster({
                   onClick={() => onSelect(a.id)}
                   title={`${a.name} — ${STATUS_LABEL[status]}`}
                   className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition ${
-                    selected ? "bg-zinc-100" : "hover:bg-zinc-50"
+                    selected ? "bg-accent-soft" : "hover:bg-zinc-50"
                   }`}
                 >
                   <StatusDot status={status} />
                   <span
                     className={`text-sm truncate flex-1 ${
-                      selected ? "text-zinc-900 font-medium" : "text-zinc-700"
+                      selected ? "text-accent font-medium" : "text-zinc-700"
                     }`}
                   >
                     {a.name}

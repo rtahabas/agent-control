@@ -35,7 +35,7 @@ export function SidebarNav({
   const open = manual === "open" || inside.includes(tab);
 
   return (
-    <nav className="flex-1 min-h-0 overflow-y-auto py-3">
+    <nav className="shrink-0 py-3">
       <Item label={PINNED_TOP.label} active={tab === PINNED_TOP.tab} onClick={() => onTabChange(PINNED_TOP.tab)} strong />
       {NAV.flatMap((s) => s.items)
         .filter((i) => ALWAYS.includes(i.tab))
@@ -49,7 +49,20 @@ export function SidebarNav({
         aria-expanded={open}
         className="mt-3 w-full flex items-center gap-1.5 px-5 py-1.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider hover:text-zinc-600 transition"
       >
-        <span className={`transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`transition-transform ${open ? "rotate-90" : ""}`}
+          aria-hidden
+        >
+          <path d="M3.5 1.5 L7 5 L3.5 8.5" />
+        </svg>
         Manage
       </button>
 
@@ -93,7 +106,7 @@ function Item({
       onClick={onClick}
       className={`w-full text-left px-5 py-1.5 text-sm transition ${
         active
-          ? "bg-zinc-100 text-zinc-900 font-medium border-l-2 border-zinc-900 -ml-[2px] pl-[22px]"
+          ? "bg-accent-soft text-accent font-medium border-l-2 border-accent -ml-[2px] pl-[22px]"
           : `hover:bg-zinc-50 ${strong ? "text-zinc-700 font-medium" : "text-zinc-600"}`
       }`}
     >
