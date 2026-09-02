@@ -12,12 +12,50 @@ export function AgentRoster({
   agents,
   selectedId,
   onSelect,
+  compact = false,
 }: {
   agents: Agent[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Icon-width strip for the folded rail. */
+  compact?: boolean;
 }) {
   const attention = useAgentAttention();
+
+  // Folding the rail must not cost the one thing this panel exists for. An
+  // agent blocked on a permission card is invisible until you happen to open
+  // it, so the folded rail keeps every agent as a badge: same status colour,
+  // same click, no names.
+  if (compact) {
+    return (
+      <div className="flex-1 min-h-0 overflow-y-auto w-full flex flex-col items-center gap-1.5 pt-3">
+        {agents.map((a) => {
+          const status = statusOf(attention[a.id]);
+          const selected = a.id === selectedId;
+          return (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => onSelect(a.id)}
+              title={`${a.name} — ${STATUS_LABEL[status]}`}
+              className={`relative w-7 h-7 shrink-0 rounded-md text-[11px] font-medium transition ${
+                selected
+                  ? "bg-zinc-900 text-white"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              }`}
+            >
+              {a.name.slice(0, 2).toUpperCase()}
+              {status !== "idle" && (
+                <span className="absolute -top-0.5 -right-0.5">
+                  <StatusDot status={status} />
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-zinc-200 px-3 py-3">

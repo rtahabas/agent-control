@@ -24,22 +24,28 @@ export function Sidebar({
   collapsed,
   onToggle,
 }: Props) {
-  // Collapsed keeps the toggle and nothing else. Unmounting the rail entirely
-  // would leave no way back without putting a second control in the top bar,
-  // and a console you can fold but not unfold is worse than one that never
-  // folded.
+  // Folded still has a job. Giving the conversation the width is worth nothing
+  // if it costs the reason this console exists — seeing that some other agent
+  // is blocked on a card. The strip keeps every agent and its status; only the
+  // names and the navigation go.
   if (collapsed) {
     return (
-      <aside className="w-11 shrink-0 border-r border-zinc-200 bg-white flex flex-col items-center py-4">
+      <aside className="w-11 shrink-0 border-r border-zinc-200 bg-white flex flex-col items-center py-3">
         <button
           type="button"
           onClick={onToggle}
           aria-label="Show sidebar"
           title="Show sidebar"
-          className="w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition"
+          className="w-7 h-7 shrink-0 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 transition"
         >
           ▸
         </button>
+        <AgentRoster
+          agents={agents}
+          selectedId={selectedAgent?.id ?? null}
+          onSelect={onSelectAgent}
+          compact
+        />
       </aside>
     );
   }
