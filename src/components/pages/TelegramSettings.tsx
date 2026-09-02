@@ -100,7 +100,7 @@ TELEGRAM_CHAT_ID=...`}</pre>
         <pre className="mt-2 text-[11px] bg-zinc-50 border border-zinc-200 rounded px-2 py-1.5 mono whitespace-pre-wrap">{`# In .claude/settings.json hooks.Stop:
 {
   "type": "command",
-  "command": "curl -s -X POST http://localhost:3000/api/telegram/notify -H 'Content-Type: application/json' -d '{\\"event\\":\\"stop\\",\\"agent\\":\\"agent-one\\",\\"message\\":\\"session ended\\"}' >/dev/null"
+  "command": "curl -s -X POST http://localhost:3000/api/telegram/notify -H 'Content-Type: application/json' -d '{\\"event\\":\\"stop\\",\\"agent\\":\\"your-agent-id\\",\\"message\\":\\"session ended\\"}' >/dev/null"
 }`}</pre>
       </details>
     </section>

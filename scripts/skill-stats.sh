@@ -202,7 +202,7 @@ if [ "$MODE" = "json" ]; then
 fi
 
 if [ "$MODE" = "md" ]; then
-  echo "## Agent-One Skill Stats (last ${WINDOW_DAYS} days)"
+  echo "## Skill Stats (last ${WINDOW_DAYS} days)"
   echo
   echo "| Status | Skill | Invocations | Last invoked |"
   echo "|---|---|---:|---|"
@@ -228,7 +228,7 @@ if [ "$MODE" = "md" ]; then
   exit 0
 fi
 
-echo "=== Agent-One Skill Stats (last ${WINDOW_DAYS} days) ==="
+echo "=== Skill Stats (last ${WINDOW_DAYS} days) ==="
 echo
 echo "ACTIVE (${#ACTIVE_LINES[@]})"
 if [ "${#ACTIVE_LINES[@]}" -eq 0 ]; then

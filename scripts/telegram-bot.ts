@@ -52,7 +52,12 @@ if (!TOKEN || !CHAT) {
 const ALLOWED_CHAT_ID = String(CHAT);
 const API = `https://api.telegram.org/bot${TOKEN}`;
 const DASH = `http://localhost:${PORT}`;
-const AGENT_DIR = env.AGENT_DIR ?? "/path/to/agents/Agent-One";
+const AGENT_DIR = env.AGENT_DIR ?? "";
+if (!AGENT_DIR) {
+  console.error("missing AGENT_DIR — point it at the agent directory this bot speaks for");
+  process.exit(2);
+}
+
 const CLAUDE_BIN = env.CLAUDE_BIN ?? "claude";
 const ASK_TIMEOUT_MS = 90_000;
 let offset = 0;
@@ -142,7 +147,7 @@ function fmtNum(n: number): string {
 const HELP = [
   "<b>Agent Control bot</b>",
   "",
-  "Free text → forwarded to Claude with Agent-One context.",
+  "Free text → forwarded to Claude with the agent's context.",
   "Slash commands → quick read-only actions:",
   "",
   "/help — this list",

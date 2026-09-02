@@ -44,7 +44,7 @@ export function resolveLogPath(opts: EmitOptions = {}): string | null {
   if (!projectRoot) return null;
 
   // Two layouts seen in practice for the bash-hook log file location:
-  //   - nested: <PROJECT_ROOT>/memory/memory/skill-activity.log  (canonical, Agent-One)
+  //   - nested: <PROJECT_ROOT>/memory/memory/skill-activity.log  (canonical)
   //   - flat:   <PROJECT_ROOT>/memory/skill-activity.log         (legacy assumption)
   // Prefer the existing file so native emit converges with the bash hook
   // writer instead of creating a parallel ghost log. When neither exists,

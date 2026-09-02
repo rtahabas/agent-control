@@ -5,7 +5,7 @@ const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * Whether a request may act on this dashboard.
  *
  * The panel drives real agents, and an agent id is a readable slug like
- * "agent-one". A page you merely visit can POST to a port on your own machine
+ * "research-bot". A page you merely visit can POST to a port on your own machine
  * — a `text/plain` body is a "simple request", so no preflight stands in the
  * way and the browser sends it happily. It cannot read the reply, but starting
  * the run is the damage. Running only on your own machine is what makes that
